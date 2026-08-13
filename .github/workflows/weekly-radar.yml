@@ -1,0 +1,82 @@
+name: ME Protein Weekly Radar
+
+on:
+  schedule:
+    # Beijing is UTC+8 year-round: Monday 10:00 Beijing = Monday 02:00 UTC.
+    - cron: "0 2 * * 1"
+  workflow_dispatch:
+    inputs:
+      mode:
+        description: "test adds a subject prefix and never updates recommendation history"
+        required: true
+        default: "test"
+        type: choice
+        options: [test, production]
+
+concurrency:
+  group: me-protein-weekly-radar
+  cancel-in-progress: false
+
+permissions:
+  contents: write
+
+jobs:
+  radar:
+    runs-on: ubuntu-latest
+    timeout-minutes: 50
+    env:
+      QQ_EMAIL: ${{ secrets.QQ_EMAIL }}
+      QQ_EMAIL_AUTH_CODE: ${{ secrets.QQ_EMAIL_AUTH_CODE }}
+      RECIPIENT_EMAIL: ${{ secrets.RECIPIENT_EMAIL }}
+      DEEPSEEK_API_KEY: ${{ secrets.DEEPSEEK_API_KEY }}
+      NCBI_API_KEY: ${{ secrets.NCBI_API_KEY }}
+      OPENALEX_API_KEY: ${{ secrets.OPENALEX_API_KEY }}
+      RUN_MODE: ${{ github.event_name == 'schedule' && 'production' || inputs.mode }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+
+      - name: Install and run offline tests
+        run: |
+          python -m pip install -e .
+          python -m unittest discover -s tests -v
+
+      - name: Retrieve, verify, select, summarize, and send
+        id: radar
+        continue-on-error: true
+        run: python -m me_protein_radar --mode "$RUN_MODE"
+
+      - name: Preserve budget usage and successful production history
+        if: always()
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add data/usage.json data/history.json
+          if ! git diff --cached --quiet; then
+            git commit -m "chore: update radar state"
+            git push
+          fi
+
+      - name: Upload generated report for diagnosis
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: me-protein-radar-output
+          path: output/
+          if-no-files-found: ignore
+          retention-days: 14
+
+      - name: Alert for failures outside the main radar step
+        if: failure() && steps.radar.outcome != 'failure'
+        run: |
+          python scripts/workflow_alert.py "Repository: $GITHUB_REPOSITORY" "Run: $GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID"
+
+      - name: Propagate radar failure
+        if: steps.radar.outcome == 'failure'
+        run: exit 1

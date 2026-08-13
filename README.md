@@ -18,8 +18,8 @@
 
 1. Crossref、PubMed、Europe PMC 和 OpenAlex 按来源并行检索正式发表论文；除主题检索外，PubMed/Europe PMC 使用分组期刊条件，Crossref 对重点化学与工程期刊逐刊定向召回。综述另走独立检索通道：PubMed 使用 `Review[Publication Type]`，Europe PMC 使用 `PUB_TYPE:review`，其余来源使用综述专用主题式，避免只靠正文中出现 review 一词。
 2. 按 DOI 优先、题名与第一作者兜底去重，并做低成本主题预筛；预印本和明确的 nanozyme/临床动物等标题在模型调用前直接排除，模型候选池优先为 Top 期刊预留最多 40 个位置。
-3. 优先核验 Europe PMC 开放全文；不可得时严格按公开摘要核验。
-4. DeepSeek `deepseek-v4-flash` 先对候选池做轻量语义、湿实验、证据与创新性筛选；只有最终入选的 10–15 篇才再次调用模型生成中文题目、推荐理由和速读摘要。
+3. 优先核验 Europe PMC 开放全文；不可得时严格按公开摘要核验。公共数据库、开放全文和模型接口出现响应中断、连接重置或远端提前关闭时会自动退避重试；单篇开放全文失败仍降级为摘要，不阻断整期。
+4. DeepSeek `deepseek-v4-flash` 先对候选池做轻量语义、湿实验、证据与创新性筛选；单篇筛选在重试后仍失败会被隔离并记录，只有连续 5 篇均不可用才判定模型服务异常。只有最终入选的 10–15 篇才再次调用模型生成中文题目、推荐理由和速读摘要。
 5. 通过 `config/journals.json` 将期刊全名和简称归一化，区分直接 Top、条件 Top 与仅综述 Top；高水平综述目录覆盖 Nature Reviews、Trends、Chemical Society Reviews、Annual Review、Current Opinion 和 Biotechnology Advances 等相关刊物。再按研究方向、证据等级、论文类型、时间池和弹性多样性选稿。创新例外会在邮件中单独标注并展示证据依据。
 6. QQ SMTP 发送成功后才写入历史；测试邮件有 `[TEST]` 前缀且不写历史。失败会发送告警邮件。
 

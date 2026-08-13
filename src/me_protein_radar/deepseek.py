@@ -232,14 +232,33 @@ class DeepSeekClient:
         )
 
 
-def screen_all(records: list[dict[str, Any]], client: DeepSeekClient, journal_catalog: list[dict[str, Any]]) -> tuple[list[dict[str, Any]], list[dict[str, str]]]:
+def screen_all(
+    records: list[dict[str, Any]],
+    client: DeepSeekClient,
+    journal_catalog: list[dict[str, Any]],
+    max_consecutive_failures: int = 5,
+) -> tuple[list[dict[str, Any]], list[dict[str, str]]]:
     accepted: list[dict[str, Any]] = []
     rejected: list[dict[str, str]] = []
+    consecutive_failures = 0
     for record in records:
         if record.get("verification_level") == "metadata":
             rejected.append({"title": record.get("title", ""), "reason": "metadata-only"})
             continue
-        analysis = client.screen(record)
+        try:
+            analysis = client.screen(record)
+            consecutive_failures = 0
+        except RadarError as exc:
+            consecutive_failures += 1
+            rejected.append({
+                "title": record.get("title", ""),
+                "reason": f"model screening failed after retries: {clean_text(exc)}",
+            })
+            if consecutive_failures >= max(1, max_consecutive_failures):
+                raise RadarError(
+                    f"DeepSeek screening unavailable for {consecutive_failures} consecutive candidates"
+                ) from exc
+            continue
         if not analysis["eligible"] or analysis["track"] == "irrelevant":
             rejected.append({"title": record.get("title", ""), "reason": clean_text(analysis.get("uncertainty_note")) or "semantic screening: irrelevant"})
             continue

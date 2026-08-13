@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import http.client
 import json
 import tempfile
 import unittest
@@ -12,6 +13,7 @@ from me_protein_radar.config import RadarConfig
 from me_protein_radar.deepseek import BudgetLedger, DeepSeekClient, screen_all, summarize_selected
 from me_protein_radar.discovery import build_review_search_specs, build_targeted_search_specs, crossref_search, hard_exclusion_reason, inverted_abstract, merge_candidates, normalize_record
 from me_protein_radar.io_utils import RadarError, assess_journal, is_top_journal
+from me_protein_radar.http import request_bytes
 from me_protein_radar.render import render, subject
 from me_protein_radar.pipeline import run
 from me_protein_radar.selection import commit_history, select
@@ -19,6 +21,22 @@ from me_protein_radar.verification import verify_candidate
 
 
 ROOT = Path(__file__).resolve().parents[1]
+
+
+class _Response:
+    def __init__(self, value):
+        self.value = value
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, *args):
+        return False
+
+    def read(self):
+        if isinstance(self.value, Exception):
+            raise self.value
+        return self.value
 
 
 def enriched(index: int, published: str, *, review: bool = False, track: str = "metabolic_engineering", wet_lab: bool = True, preprint: bool = False, top: bool = True, exceptional: bool = False, base_score: int = 84, journal: str = "Metabolic Engineering") -> dict:
@@ -36,6 +54,23 @@ def enriched(index: int, published: str, *, review: bool = False, track: str = "
 
 
 class DiscoveryTests(unittest.TestCase):
+    def test_incomplete_http_read_is_retried_and_query_is_redacted(self):
+        responses = iter([
+            _Response(http.client.IncompleteRead(b"partial")),
+            _Response(b'{"ok": true}'),
+        ])
+        with patch("me_protein_radar.http.urllib.request.urlopen", side_effect=lambda *a, **k: next(responses)) as opener, patch("me_protein_radar.http.time.sleep") as sleeper:
+            payload = request_bytes("https://example.org/api?api_key=secret", retries=2)
+        self.assertEqual(payload, b'{"ok": true}')
+        self.assertEqual(opener.call_count, 2)
+        sleeper.assert_called_once()
+
+        with patch("me_protein_radar.http.urllib.request.urlopen", return_value=_Response(http.client.IncompleteRead(b""))), patch("me_protein_radar.http.time.sleep"):
+            with self.assertRaises(RadarError) as raised:
+                request_bytes("https://example.org/api?api_key=secret", retries=1)
+        self.assertNotIn("secret", str(raised.exception))
+        self.assertIn("IncompleteRead", str(raised.exception))
+
     def test_crossref_normalization_and_dedup(self):
         response = {"message": {"items": [{"DOI": "10.1/X", "title": ["Microbial pathway engineering"], "author": [{"given": "A", "family": "Li"}], "container-title": ["Journal"], "published": {"date-parts": [[2026, 7, 1]]}, "abstract": "<jats:p>Enzyme and microbial biosynthesis.</jats:p>", "type": "journal-article", "URL": "https://doi.org/10.1/X"}]}}
         rows = crossref_search("query", date(2020, 1, 1), date(2026, 8, 1), 10, "a@example.com", 3, fetch=lambda *a, **k: response)
@@ -133,6 +168,28 @@ class DeepSeekTests(unittest.TestCase):
         self.assertFalse(rejected)
         self.assertTrue(accepted[0]["is_preprint"])
         self.assertEqual(accepted[0]["document_type"], "preprint")
+
+    def test_single_screen_failure_is_isolated_but_outage_stops(self):
+        accepted_result = {"eligible": True, "document_type": "article", "track": "integrated", "domain": "microbial", "cell_free_direct_support": False, "wet_lab": True, "host_or_object": "E. coli", "product_or_task": "product", "methods": ["assay"], "base_score": 90, "exceptional_novelty": False, "novelty_category": "none", "novelty_evidence_zh": "", "evidence_scope": "abstract", "uncertainty_note": ""}
+        responses = iter([RadarError("temporary read failure"), accepted_result])
+
+        def screen_once(_self, _record):
+            value = next(responses)
+            if isinstance(value, Exception):
+                raise value
+            return value
+
+        client = type("Client", (), {"settings": {"model": "deepseek-v4-flash"}, "screen": screen_once})()
+        config = RadarConfig.from_path(ROOT / "config" / "radar.json")
+        first, second = enriched(90, "2026-08-01"), enriched(91, "2026-08-02")
+        accepted, rejected = screen_all([first, second], client, config.journals, max_consecutive_failures=3)
+        self.assertEqual(len(accepted), 1)
+        self.assertEqual(len(rejected), 1)
+        self.assertIn("model screening failed", rejected[0]["reason"])
+
+        failed_client = type("Client", (), {"settings": {"model": "deepseek-v4-flash"}, "screen": lambda self, record: (_ for _ in ()).throw(RadarError("offline"))})()
+        with self.assertRaisesRegex(RadarError, "2 consecutive candidates"):
+            screen_all([first, second], failed_client, config.journals, max_consecutive_failures=2)
 
     def test_only_final_selection_receives_long_summaries(self):
         calls = []

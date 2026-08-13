@@ -54,7 +54,12 @@ def run(args: argparse.Namespace) -> dict[str, Any]:
     ds = config.deepseek
     ledger = BudgetLedger(args.usage, float(config.get("monthly_budget_cny")), float(ds.get("input_cny_per_million", 1)), float(ds.get("output_cny_per_million", 2)), issue_date)
     client = DeepSeekClient(config, ledger)
-    screened, rejected = screen_all(verified, client, config.journals)
+    screened, rejected = screen_all(
+        verified,
+        client,
+        config.journals,
+        int(ds.get("max_consecutive_screen_failures", 5)),
+    )
     try:
         selection = select(screened, history, issue_date, config)
     except RadarError as exc:

@@ -1,6 +1,8 @@
 from __future__ import annotations
 
+import http.client
 import json
+import socket
 import time
 import urllib.error
 import urllib.request
@@ -10,6 +12,16 @@ from .io_utils import RadarError
 
 
 USER_AGENT = "ME-Protein-Paper-Radar/0.1 (public academic metadata client)"
+RETRYABLE_READ_ERRORS = (
+    urllib.error.URLError,
+    http.client.IncompleteRead,
+    http.client.RemoteDisconnected,
+    http.client.HTTPException,
+    TimeoutError,
+    socket.timeout,
+    ConnectionError,
+    OSError,
+)
 
 
 def request_bytes(
@@ -28,11 +40,12 @@ def request_bytes(
         try:
             with urllib.request.urlopen(request, timeout=timeout) as response:
                 return response.read()
-        except (urllib.error.URLError, TimeoutError, OSError) as exc:
+        except RETRYABLE_READ_ERRORS as exc:
             last_error = exc
             if attempt < retries:
                 time.sleep(1.5 * (attempt + 1))
-    raise RadarError(f"Request failed after {retries + 1} attempts: {url}: {type(last_error).__name__}")
+    safe_url = url.partition("?")[0]
+    raise RadarError(f"Request failed after {retries + 1} attempts: {safe_url}: {type(last_error).__name__}")
 
 
 def request_json(url: str, **kwargs: Any) -> Any:
@@ -41,4 +54,3 @@ def request_json(url: str, **kwargs: Any) -> Any:
         return json.loads(payload.decode("utf-8-sig"))
     except (UnicodeDecodeError, json.JSONDecodeError) as exc:
         raise RadarError(f"Invalid JSON response from {url}") from exc
-

@@ -31,6 +31,7 @@
     "screen_max_output_tokens": 650,
     "summary_max_output_tokens": 900,
     "max_retries": 2,
+    "max_consecutive_screen_failures": 5,
     "input_cny_per_million": 1.0,
     "output_cny_per_million": 2.0
   },

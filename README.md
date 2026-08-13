@@ -1,6 +1,8 @@
 # ME × Protein 文献雷达
 
-这是一个可直接上传 GitHub 的无人值守文献筛选与 QQ 邮件推送项目。它面向微生物代谢工程、酶工程和带湿实验验证的 AI for Protein 研究；每周一北京时间 10:00 运行，不要求电脑开机、保持 Codex 打开或持续登录 QQ 邮箱网页。
+这是一个可在 GitHub Actions 上无人值守运行的文献筛选与 QQ 邮件推送项目。它面向微生物代谢工程、酶工程和带湿实验验证的 AI for Protein 研究；每周一北京时间 10:00 运行，不要求电脑开机、保持 Codex 打开或持续登录 QQ 邮箱网页。
+
+> 安全说明：公开仓库只包含代码、配置模板和状态数据。真实邮箱、SMTP 授权码与 API Key 必须保存在 GitHub Actions Secrets 中。Fork 不会继承上游仓库的 Secrets。
 
 ## 每期规则
 
@@ -27,7 +29,7 @@
 
 GitHub 云端不会、也不能直接调用电脑里安装的 `nature-academic-search` Skill；因此本项目把公开数据库检索实现为独立模块。Codex 中的该 Skill 仍可用于临时复核、补检和人工深读，但不是每周自动推送的运行依赖。
 
-## 上传 GitHub 前需要设置
+## Fork 或部署后需要设置
 
 在仓库 `Settings → Secrets and variables → Actions` 新建以下 Secrets：
 
@@ -48,13 +50,28 @@ QQ 邮箱网页不需要持续登录，但必须保持 SMTP 服务启用、授�
 
 ## 首次启用
 
-1. 将本目录内容上传到一个私有 GitHub 仓库。
+1. Fork 本仓库，或将本目录内容上传到自己的 GitHub 仓库。
 2. 添加上述 GitHub Secrets，并在仓库 Actions 设置中允许工作流具有读写权限。
 3. 打开 `Actions → ME Protein Weekly Radar → Run workflow`，先选 `test`。
 4. 确认收到带 `[TEST]` 前缀的邮件、排版和内容正常；测试不会写入 `data/history.json`。
 5. 再手动选择 `production` 验证一次。此后计划任务会在每周一北京时间 10:00 自动运行。
 
 GitHub 的计划任务可能因平台排队而延迟几分钟，并非本地时区错误。
+
+## 长期无人值守
+
+- 主工作流由 `.github/workflows/weekly-radar.yml` 在每周一北京时间 10:00 调度，计划任务始终读取默认分支的最新工作流文件。
+- 公开仓库若连续 60 天没有仓库活动，GitHub 可能自动停用定时工作流。`.github/workflows/keepalive.yml` 每月只更新一次 `data/keepalive.txt`，不检索论文、不调用 DeepSeek、不发送邮件，用于维持仓库活动。
+- 每周生产运行成功后会提交 `data/history.json` 与 `data/usage.json`；测试模式不会写推荐历史。
+- 如果 GitHub Actions、仓库写权限、QQ SMTP、DeepSeek Key 或其他外部服务失效，任务仍可能中断；失败时会发送告警邮件，并且不会写入推荐历史。
+- 建议每季度检查一次 Actions 最近运行、DeepSeek 余额与 QQ SMTP 授权码；公开仓库的标准 GitHub-hosted runner 通常不计 Actions 分钟费用，但 DeepSeek API 和邮件服务仍受各自额度与政策约束。
+
+## 公开仓库安全
+
+- 仓库公开后，源码、提交历史、Actions 运行日志和状态文件会对所有人可见；Secrets 的值不会随仓库公开，也不会传给普通 Fork。
+- 不要在 Issue、日志、截图、示例文件或错误信息中粘贴真实密钥。发现泄露时先撤销或轮换密钥，再清理日志或历史。
+- `data/history.json` 会保存已推荐论文的公开题录标识，用于去重；`data/usage.json` 只保存模型调用量与估算费用，不保存密钥。
+- 安全问题请使用 GitHub Security Advisory 私下报告，详见 `SECURITY.md`。
 
 ## 费用保护
 

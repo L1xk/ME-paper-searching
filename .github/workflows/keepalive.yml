@@ -1,0 +1,33 @@
+name: Keep Scheduled Workflows Active
+
+on:
+  schedule:
+    # Public repositories can have schedules disabled after 60 days without activity.
+    # A monthly state-only commit keeps this repository active without sending email.
+    - cron: "17 3 1 * *"
+  workflow_dispatch:
+
+concurrency:
+  group: me-protein-keepalive
+  cancel-in-progress: false
+
+permissions:
+  contents: write
+
+jobs:
+  keepalive:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Record repository activity
+        run: |
+          date -u +"%Y-%m-%dT%H:%M:%SZ" > data/keepalive.txt
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add data/keepalive.txt
+          if ! git diff --cached --quiet; then
+            git commit -m "chore: keep scheduled workflows active [skip ci]"
+            git push
+          fi

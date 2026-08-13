@@ -31,6 +31,7 @@ Use this Skill to maintain the self-contained GitHub-ready pipeline in this dire
 11. Resolve journal aliases through `config/journals.json`. Treat conditional application journals as Top only when supplied evidence matches their configured scope terms, and treat review-only journals as Top only for reviews.
 12. Generate Chinese summaries for all selected papers in static, no-JavaScript email HTML and expose targeted-retrieval, two-stage-model, candidate-pool, and diversity diagnostics in the footer.
 13. Enforce the configured monthly CNY budget by reserving worst-case cost before each model attempt and settling with reported token usage. Stop and alert before exceeding the limit.
+14. For public unattended deployments, keep credentials exclusively in GitHub Actions Secrets, document that forks receive no upstream secrets, and preserve monthly repository activity so GitHub does not disable scheduled workflows after prolonged inactivity.
 
 ## Interactive literature support
 

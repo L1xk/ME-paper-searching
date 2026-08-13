@@ -6,4 +6,6 @@ __pycache__/
 output/
 data/*.tmp
 data/*.lock
-
+qq_test_*
+sample_candidates.json
+sample_digest_*

@@ -317,7 +317,10 @@ def discover(config: RadarConfig, issue_date: date, mailto: str) -> tuple[list[R
     recent = [x for x in formal_candidates if (parse_date(x.get("publication_date")) or lower) >= recent_cutoff and x not in reviews]
     historical = [x for x in formal_candidates if x not in reviews and x not in recent]
     reserved: list[Record] = []
-    for pool, quota in ((top_formal, 25), (reviews, 20), (recent, 20), (historical, formal_limit)):
+    top_reserve = int(config.get("top_candidate_reserve", 40))
+    review_reserve = int(config.get("review_candidate_reserve", 25))
+    recent_reserve = int(config.get("recent_candidate_reserve", 25))
+    for pool, quota in ((top_formal, top_reserve), (reviews, review_reserve), (recent, recent_reserve), (historical, formal_limit)):
         for item in pool:
             if item not in reserved and len(reserved) < formal_limit and sum(x in pool for x in reserved) < quota:
                 reserved.append(item)

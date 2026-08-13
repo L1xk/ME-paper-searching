@@ -21,7 +21,7 @@ from me_protein_radar.verification import verify_candidate
 ROOT = Path(__file__).resolve().parents[1]
 
 
-def enriched(index: int, published: str, *, review: bool = False, track: str = "metabolic_engineering", wet_lab: bool = True, preprint: bool = False, top: bool = True) -> dict:
+def enriched(index: int, published: str, *, review: bool = False, track: str = "metabolic_engineering", wet_lab: bool = True, preprint: bool = False, top: bool = True, exceptional: bool = False, base_score: int = 84) -> dict:
     return {
         "title": f"Engineering microbial pathway {index}", "title_zh": f"微生物通路工程 {index}",
         "authors": [f"Author {index}"], "first_author": f"Author {index}", "journal": "Metabolic Engineering",
@@ -29,7 +29,7 @@ def enriched(index: int, published: str, *, review: bool = False, track: str = "
         "document_type": "preprint" if preprint else ("review" if review else "article"), "is_preprint": preprint, "track": track,
         "domain": "microbial", "cell_free_direct_support": False, "wet_lab": wet_lab,
         "host_or_object": "Escherichia coli", "product_or_task": "biosynthesis", "methods": ["pathway engineering"],
-        "base_score": 84, "recommendation_reason_zh": "工程路径明确，证据充分。", "summary_zh": "研究构建并验证微生物合成通路，结果支持其工程价值。",
+        "base_score": base_score, "exceptional_novelty": exceptional, "novelty_category": "new_complete_pathway" if exceptional else "none", "novelty_evidence_zh": "证据明确支持首次完整新通路并完成实验验证。" if exceptional else "", "recommendation_reason_zh": "工程路径明确，证据充分。", "summary_zh": "研究构建并验证微生物合成通路，结果支持其工程价值。",
         "evidence_scope": "abstract", "uncertainty_note": "", "verification_level": "abstract", "verification_note": "公开摘要核验",
         "semantic_relevance_verified": True, "summary_model": "deepseek-v4-flash", "summary_validated": True, "source_labels": ["bioRxiv" if preprint else "PubMed"], "top_journal": top,
     }
@@ -74,7 +74,7 @@ class DeepSeekTests(unittest.TestCase):
             path = Path(temp) / "usage.json"
             config = RadarConfig.from_path(ROOT / "config" / "radar.json")
             ledger = BudgetLedger(path, 20, 1, 2, date(2026, 8, 13))
-            result = {"eligible": True, "document_type": "article", "track": "integrated", "domain": "microbial", "cell_free_direct_support": False, "wet_lab": True, "host_or_object": "E. coli", "product_or_task": "product", "methods": ["ML", "assay"], "base_score": 90, "title_zh": "测试题目", "recommendation_reason_zh": "同时验证通路与酶改造。", "summary_zh": "研究使用模型筛选酶突变，并通过湿实验和微生物通路验证其作用。", "evidence_scope": "abstract", "uncertainty_note": ""}
+            result = {"eligible": True, "document_type": "article", "track": "integrated", "domain": "microbial", "cell_free_direct_support": False, "wet_lab": True, "host_or_object": "E. coli", "product_or_task": "product", "methods": ["ML", "assay"], "base_score": 90, "exceptional_novelty": False, "novelty_category": "none", "novelty_evidence_zh": "", "title_zh": "测试题目", "recommendation_reason_zh": "同时验证通路与酶改造。", "summary_zh": "研究使用模型筛选酶突变，并通过湿实验和微生物通路验证其作用。", "evidence_scope": "abstract", "uncertainty_note": ""}
             response = {"choices": [{"message": {"content": json.dumps(result, ensure_ascii=False)}}], "usage": {"prompt_tokens": 1000, "completion_tokens": 500}}
             client = DeepSeekClient(config, ledger, transport=lambda *a, **k: response, api_key="test-only")
             self.assertTrue(client.analyze({"title": "x", "evidence_text": "evidence", "verification_level": "abstract"})["eligible"])
@@ -88,7 +88,7 @@ class DeepSeekTests(unittest.TestCase):
             with self.assertRaises(RadarError): ledger.ensure_available(.001)
 
     def test_model_preprint_decision_is_conservative(self):
-        result = {"eligible": True, "document_type": "preprint", "track": "integrated", "domain": "microbial", "cell_free_direct_support": False, "wet_lab": True, "host_or_object": "E. coli", "product_or_task": "product", "methods": ["assay"], "base_score": 90, "title_zh": "测试题目", "recommendation_reason_zh": "证据充分。", "summary_zh": "研究通过实验验证微生物通路和酶工程。", "evidence_scope": "abstract", "uncertainty_note": ""}
+        result = {"eligible": True, "document_type": "preprint", "track": "integrated", "domain": "microbial", "cell_free_direct_support": False, "wet_lab": True, "host_or_object": "E. coli", "product_or_task": "product", "methods": ["assay"], "base_score": 90, "exceptional_novelty": False, "novelty_category": "none", "novelty_evidence_zh": "", "title_zh": "测试题目", "recommendation_reason_zh": "证据充分。", "summary_zh": "研究通过实验验证微生物通路和酶工程。", "evidence_scope": "abstract", "uncertainty_note": ""}
         client = type("Client", (), {"settings": {"model": "deepseek-v4-flash"}, "analyze": lambda self, record: result})()
         record = enriched(99, "2026-08-01", top=False)
         accepted, rejected = analyze_all([record], client, ["Nature Communications"])
@@ -113,6 +113,7 @@ class SelectionTests(unittest.TestCase):
         mail = render(chosen)
         self.assertIn("ME × Protein", mail)
         self.assertIn("科研视角 · Reviews", mail)
+        self.assertNotIn("前沿预警", mail)
         self.assertNotIn("javascript", mail.lower())
         self.assertTrue(subject("test", "2026-08-17", 10).startswith("[TEST]"))
         self.assertEqual(history["recommended"], {})
@@ -126,13 +127,31 @@ class SelectionTests(unittest.TestCase):
         papers += [enriched(i, "2026-08-05", preprint=True, top=False) for i in range(30, 40)]
         chosen = select(papers, {"recommended": {}}, date(2026, 8, 17), config)
         self.assertFalse(any(x["is_preprint"] for x in chosen["selected_formal"]))
-        self.assertEqual(len(chosen["preprint_watchlist"]), int(config.get("preprint_max")))
+        self.assertEqual(chosen["preprint_watchlist"], [])
+
+    def test_only_verified_exceptional_non_top_can_fill(self):
+        config = RadarConfig.from_path(ROOT / "config" / "radar.json")
+        papers = [enriched(i, "2022-03-12") for i in range(1, 7)]
+        papers += [enriched(20, "2023-08-01", review=True), enriched(21, "2023-08-02", review=True)]
+        papers += [enriched(30, "2026-08-05", top=False, exceptional=True, base_score=96), enriched(31, "2026-08-06", top=False, exceptional=True, base_score=95)]
+        chosen = select(papers, {"recommended": {}}, date(2026, 8, 17), config)
+        self.assertEqual(sum(x["top_journal"] for x in chosen["selected_formal"]), 8)
+        exceptions = [x for x in chosen["selected_formal"] if x["quality_tier"] == "exceptional_non_top"]
+        self.assertEqual(len(exceptions), 2)
+        self.assertTrue(all(x["novelty_evidence_zh"] for x in exceptions))
+        exception_mail = render(chosen)
+        self.assertIn("创新例外 · 非 Top 期刊", exception_mail)
+        self.assertIn("创新例外依据", exception_mail)
+
+        papers[-1] = enriched(31, "2026-08-06", top=False, exceptional=False, base_score=98)
+        with self.assertRaisesRegex(RadarError, "Formal quota unmet"):
+            select(papers, {"recommended": {}}, date(2026, 8, 17), config)
 
     def test_zero_top_journals_blocks_delivery(self):
         config = RadarConfig.from_path(ROOT / "config" / "radar.json")
         papers = [enriched(i, f"{2020 + i % 5}-03-12", top=False) for i in range(1, 10)]
         papers += [enriched(20, "2026-08-01", review=True, top=False), enriched(21, "2026-08-02", review=True, top=False)]
-        with self.assertRaisesRegex(RadarError, "Top journal quota unmet"):
+        with self.assertRaises(RadarError):
             select(papers, {"recommended": {}}, date(2026, 8, 17), config)
 
     def test_historical_max_is_never_broken_to_fill(self):

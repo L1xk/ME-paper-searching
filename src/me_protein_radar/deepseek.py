@@ -16,6 +16,7 @@ from .io_utils import RadarError, clean_text, is_top_journal, load_json, write_j
 Transport = Callable[..., Any]
 ALLOWED_TRACKS = {"integrated", "metabolic_engineering", "enzyme_engineering", "ai_protein", "irrelevant"}
 ALLOWED_TYPES = {"article", "review", "perspective", "comment", "editorial", "bibliometric", "preprint"}
+ALLOWED_NOVELTY = {"none", "new_complete_pathway", "new_product_route", "record_performance", "validated_ai_protein_method", "generalizable_enzyme_platform"}
 
 
 @dataclass
@@ -80,6 +81,7 @@ def system_prompt() -> str:
 4. AI for Protein 需同时有蛋白对象、AI 方法、明确蛋白任务；原创研究必须有湿实验验证。通用结构预测/蛋白设计只有满足这些条件才纳入。
 5. 综述可纳入科研视角，不要求湿实验，但必须高度相关。原创 AI for Protein 的优先级低于代谢工程及二者结合。
 6. 摘要级证据只能总结摘要明确陈述的内容。
+7. 普通期刊的原创研究只有在证据明确支持下列突破之一时才能标记 exceptional_novelty=true：首次完整新通路、首次新产物路线、带明确数值的领域领先性能、经湿实验验证且可迁移的 AI 蛋白方法、或可推广的酶工程平台。常规菌株优化、单酶活性提升、仅称“novel/first”但无实质证据、一般性模型应用均必须为 false。综述不得标记为创新例外。
 输出严格 JSON 对象，不要 Markdown。中文字段应精炼、具体、避免宣传口吻。"""
 
 
@@ -105,6 +107,9 @@ def user_prompt(record: dict[str, Any]) -> str:
         "product_or_task": "string",
         "methods": ["up to 5 strings"],
         "base_score": "integer 0-100, relevance/novelty/engineering depth/transferability/evidence quality",
+        "exceptional_novelty": "boolean; use a very high bar, false for reviews and routine incremental work",
+        "novelty_category": "none|new_complete_pathway|new_product_route|record_performance|validated_ai_protein_method|generalizable_enzyme_platform",
+        "novelty_evidence_zh": "Chinese evidence sentence grounded in the supplied text; empty when exceptional_novelty is false",
         "title_zh": "Chinese title",
         "recommendation_reason_zh": "1-2 Chinese sentences explaining why it is worth reading",
         "summary_zh": "100-180 Chinese characters: question, method, major result only if supported, significance and evidence boundary",
@@ -117,16 +122,24 @@ def user_prompt(record: dict[str, Any]) -> str:
 def validate_result(value: Any) -> dict[str, Any]:
     if not isinstance(value, dict):
         raise RadarError("DeepSeek result is not a JSON object")
-    required = {"eligible", "document_type", "track", "domain", "cell_free_direct_support", "wet_lab", "host_or_object", "product_or_task", "methods", "base_score", "title_zh", "recommendation_reason_zh", "summary_zh", "evidence_scope", "uncertainty_note"}
+    required = {"eligible", "document_type", "track", "domain", "cell_free_direct_support", "wet_lab", "host_or_object", "product_or_task", "methods", "base_score", "exceptional_novelty", "novelty_category", "novelty_evidence_zh", "title_zh", "recommendation_reason_zh", "summary_zh", "evidence_scope", "uncertainty_note"}
     missing = required - value.keys()
     if missing:
         raise RadarError(f"DeepSeek JSON missing fields: {', '.join(sorted(missing))}")
-    if type(value["eligible"]) is not bool or type(value["wet_lab"]) is not bool or type(value["cell_free_direct_support"]) is not bool:
+    if type(value["eligible"]) is not bool or type(value["wet_lab"]) is not bool or type(value["cell_free_direct_support"]) is not bool or type(value["exceptional_novelty"]) is not bool:
         raise RadarError("DeepSeek JSON has invalid boolean fields")
     if value["track"] not in ALLOWED_TRACKS or value["document_type"] not in ALLOWED_TYPES:
         raise RadarError("DeepSeek JSON has invalid track or document_type")
     if not isinstance(value["methods"], list) or not 0 <= float(value["base_score"]) <= 100:
         raise RadarError("DeepSeek JSON has invalid methods or base_score")
+    if value["novelty_category"] not in ALLOWED_NOVELTY:
+        raise RadarError("DeepSeek JSON has invalid novelty_category")
+    if value["exceptional_novelty"]:
+        if value["document_type"] != "article" or value["novelty_category"] == "none" or not clean_text(value["novelty_evidence_zh"]):
+            raise RadarError("DeepSeek JSON has unsupported exceptional novelty")
+    else:
+        value["novelty_category"] = "none"
+        value["novelty_evidence_zh"] = ""
     if value["eligible"]:
         for field in ("title_zh", "recommendation_reason_zh", "summary_zh", "evidence_scope"):
             if not clean_text(value[field]):

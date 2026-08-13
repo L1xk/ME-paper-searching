@@ -1,6 +1,6 @@
 ---
 name: me-protein-paper-radar
-description: Build, configure, test, audit, or run a weekly English-literature radar for microbial metabolic engineering, enzyme engineering, and wet-lab-validated AI for Protein. Use when the user asks for ME × Protein paper discovery, screening, Chinese summaries, review quotas, preprint watchlists, QQ email delivery, DeepSeek cost control, GitHub Actions scheduling, deduplication history, or this radar repository.
+description: Build, configure, test, audit, or run a weekly English-literature radar for microbial metabolic engineering, enzyme engineering, and wet-lab-validated AI for Protein. Use when the user asks for ME × Protein paper discovery, Top-journal-first screening, strict preprint exclusion, Chinese summaries, review quotas, QQ email delivery, DeepSeek cost control, GitHub Actions scheduling, deduplication history, or this radar repository.
 ---
 
 # ME × Protein Paper Radar
@@ -25,10 +25,11 @@ Use this Skill to maintain the self-contained GitHub-ready pipeline in this dire
 5. Use DeepSeek `deepseek-v4-flash`, non-thinking mode, for semantic screening, evidence extraction, and Chinese summary in one structured JSON call. Validate every response and retry malformed or empty JSON.
 6. Enforce microbial scope. Exclude plant/animal work; allow microbial communities; allow cell-free work only when directly supporting enzyme engineering or pathway validation.
 7. Require original AI for Protein papers to contain a protein object, an AI method, a concrete protein task, and wet-lab validation. Reviews are exempt from the wet-lab rule. Downweight pure AI enzyme papers relative to metabolic engineering and integrated work.
-8. Classify preprints deterministically from source platform, Crossref type, DOI patterns, and model output. Split formal and preprint candidates before model calls; never use a preprint to fill a formal quota.
-9. Select 10–15 formal papers, including at least 2 reviews, at least 2 configured Top-journal papers, and 7–8 historical papers from the rolling six-year window. Recent means publication within 30 days of the issue date. Keep at most 2 preprints in a separate watchlist and at most 4 preprints in the model candidate pool. Stop and alert when a formal quality gate is unmet.
-10. Generate Chinese summaries for all selected formal papers and preprints; report their counts separately in static, no-JavaScript email HTML and expose candidate-pool diagnostics in the footer.
-11. Enforce the configured monthly CNY budget by reserving worst-case cost before each model attempt and settling with reported token usage. Stop and alert before exceeding the limit.
+8. Disable preprint discovery and delivery. Exclude source-, type-, DOI-, or model-identified preprints before selection and never write them to history.
+9. Select 10–15 formal papers, including at least 2 Top-journal reviews, at least 8 configured Top-journal papers overall, and 7–8 historical papers from the rolling six-year window. Recent means publication within 30 days of the issue date.
+10. Allow at most 2 non-Top original articles only when base_score is at least 94 and the supplied abstract/open-full-text evidence explicitly supports a configured exceptional novelty category. Label every exception and expose its evidence in the email. Routine optimization, unsupported first/novel wording, non-Top reviews, perspectives, and comments never qualify. Stop and alert when any quality gate is unmet.
+11. Generate Chinese summaries for all selected papers in static, no-JavaScript email HTML and expose candidate-pool diagnostics in the footer.
+12. Enforce the configured monthly CNY budget by reserving worst-case cost before each model attempt and settling with reported token usage. Stop and alert before exceeding the limit.
 
 ## Interactive literature support
 

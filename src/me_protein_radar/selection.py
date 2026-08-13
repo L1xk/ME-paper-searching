@@ -6,7 +6,7 @@ from datetime import date, timedelta
 from typing import Any
 
 from .config import RadarConfig
-from .io_utils import RadarError, normalize_doi, parse_date, rolling_years_before
+from .io_utils import RadarError, clean_text, normalize_doi, parse_date, rolling_years_before
 
 
 TRACK_ADJUSTMENT = {"integrated": 8, "metabolic_engineering": 5, "enzyme_engineering": 2, "ai_protein": -5}
@@ -42,7 +42,7 @@ def prepare(record: dict[str, Any], issue_date: date, config: RadarConfig) -> tu
     item = dict(record)
     item["is_preprint"] = bool(item.get("is_preprint")) or item.get("document_type") == "preprint"
     if item["is_preprint"]:
-        item["document_type"] = "preprint"
+        return None, "preprints disabled"
     published = parse_date(item.get("publication_date"))
     if not published or not rolling_years_before(issue_date, int(config.get("rolling_years", 6))) <= published <= issue_date:
         return None, "outside rolling six-year window"
@@ -51,6 +51,19 @@ def prepare(record: dict[str, Any], issue_date: date, config: RadarConfig) -> tu
     if item.get("verification_level") == "metadata": return None, "metadata-only"
     if item.get("track") == "ai_protein" and item.get("document_type") not in {"review"} and not item.get("wet_lab"):
         return None, "AI for Protein lacks wet-lab validation"
+    is_top = bool(item.get("top_journal"))
+    exceptional_score = float(config.get("exceptional_non_top_min_base_score", 94))
+    exceptional = (
+        not is_top
+        and item.get("document_type") == "article"
+        and bool(item.get("exceptional_novelty"))
+        and item.get("novelty_category") not in {None, "", "none"}
+        and bool(clean_text(item.get("novelty_evidence_zh")))
+        and float(item.get("base_score", 0)) >= exceptional_score
+    )
+    if not is_top and not exceptional:
+        return None, "non-Top journal without verified exceptional novelty"
+    item["quality_tier"] = "top_journal" if is_top else "exceptional_non_top"
     top_bonus = float(config.get("top_journal_bonus", 8)) if item.get("top_journal") and not item["is_preprint"] else 0
     score = float(item.get("base_score", 0)) + TRACK_ADJUSTMENT.get(str(item.get("track")), -30) + TYPE_ADJUSTMENT.get(str(item.get("document_type")), 0) + top_bonus
     item["final_score"] = round(min(100, max(0, score)), 2)
@@ -62,7 +75,7 @@ def prepare(record: dict[str, Any], issue_date: date, config: RadarConfig) -> tu
 
 
 def _rank(items: list[dict[str, Any]]) -> list[dict[str, Any]]:
-    return sorted(items, key=lambda x: (float(x["final_score"]), x.get("publication_date", ""), int(x.get("citation_count") or 0)), reverse=True)
+    return sorted(items, key=lambda x: (bool(x.get("top_journal")), float(x["final_score"]), x.get("publication_date", ""), int(x.get("citation_count") or 0)), reverse=True)
 
 
 def select(records: list[dict[str, Any]], history: dict[str, Any], issue_date: date, config: RadarConfig) -> dict[str, Any]:
@@ -74,7 +87,6 @@ def select(records: list[dict[str, Any]], history: dict[str, Any], issue_date: d
         item, reason = prepare(record, issue_date, config)
         if item is None: excluded.append({"title": record.get("title", ""), "reason": reason})
         else: eligible.append(item)
-    preprints = _rank([x for x in eligible if x.get("is_preprint") or x.get("document_type") == "preprint"])[:int(config.get("preprint_max", 5))]
     reviews = _rank([x for x in eligible if not x.get("is_preprint") and x.get("document_type") == "review"])
     research = _rank([x for x in eligible if not x.get("is_preprint") and x.get("document_type") == "article"])
     review_min, review_max = int(config.get("review_min", 2)), int(config.get("review_max", 3))
@@ -117,11 +129,14 @@ def select(records: list[dict[str, Any]], history: dict[str, Any], issue_date: d
     top_count = sum(bool(x.get("top_journal")) for x in formal)
     top_min = int(config.get("top_journal_min", 1))
     if top_count < top_min: raise RadarError(f"Top journal quota unmet: found {top_count}, need {top_min}")
-    return {"issue_date": issue_date.isoformat(), "selected_formal": formal, "selected_research": [x for x in formal if x.get("document_type") == "article"], "selected_reviews": [x for x in formal if x.get("document_type") == "review"], "preprint_watchlist": preprints, "excluded": excluded}
+    non_top_count = len(formal) - top_count
+    non_top_max = int(config.get("exceptional_non_top_max", 0))
+    if non_top_count > non_top_max: raise RadarError(f"Exceptional non-Top quota exceeded: found {non_top_count}, maximum {non_top_max}")
+    return {"issue_date": issue_date.isoformat(), "selected_formal": formal, "selected_research": [x for x in formal if x.get("document_type") == "article"], "selected_reviews": [x for x in formal if x.get("document_type") == "review"], "preprint_watchlist": [], "excluded": excluded}
 
 
 def commit_history(history: dict[str, Any], selection: dict[str, Any], issue_date: date) -> dict[str, Any]:
     result = {"version": 1, "recommended": dict(history.get("recommended", {}))}
-    for item in selection["selected_formal"] + selection["preprint_watchlist"]:
+    for item in selection["selected_formal"]:
         result["recommended"][item["record_key"]] = {"issue_date": issue_date.isoformat(), "title": item.get("title", ""), "first_author": item.get("first_author", ""), "doi": normalize_doi(item.get("doi"))}
     return result

@@ -24,8 +24,16 @@ class RadarConfig:
             raise RadarError("Invalid formal paper quota")
         if not (0 <= int(raw.get("top_journal_min", 0)) <= int(raw["formal_max"])):
             raise RadarError("Invalid Top journal quota")
+        if not (0 <= int(raw.get("exceptional_non_top_max", 0)) <= int(raw["formal_max"])):
+            raise RadarError("Invalid exceptional non-Top quota")
+        if not (0 <= float(raw.get("exceptional_non_top_min_base_score", 94)) <= 100):
+            raise RadarError("Invalid exceptional non-Top score threshold")
         if not (0 <= int(raw.get("max_preprint_semantic_candidates", 0)) <= int(raw.get("max_semantic_candidates", 80))):
             raise RadarError("Invalid preprint candidate quota")
+        candidate_limit = int(raw.get("max_semantic_candidates", 100))
+        for name in ("top_candidate_reserve", "review_candidate_reserve", "recent_candidate_reserve"):
+            if not (0 <= int(raw.get(name, 0)) <= candidate_limit):
+                raise RadarError(f"Invalid candidate reserve: {name}")
         if float(raw["monthly_budget_cny"]) <= 0:
             raise RadarError("monthly_budget_cny must be positive")
         return cls(raw)

@@ -4,15 +4,16 @@ import argparse
 import json
 import os
 import sys
+from collections import Counter
 from datetime import date, datetime
 from pathlib import Path
 from typing import Any
 from zoneinfo import ZoneInfo
 
 from .config import RadarConfig
-from .deepseek import BudgetLedger, DeepSeekClient, analyze_all
+from .deepseek import BudgetLedger, DeepSeekClient, screen_all, summarize_selected
 from .discovery import discover
-from .io_utils import RadarError, is_top_journal, load_json, write_json_atomic
+from .io_utils import RadarError, assess_journal, load_json, write_json_atomic
 from .mailer import send_alert, send_html
 from .render import render, subject
 from .selection import commit_history, select
@@ -31,27 +32,35 @@ def run(args: argparse.Namespace) -> dict[str, Any]:
         warnings: list[str] = []
     else:
         candidates, warnings = discover(config, issue_date, mailto)
-    top_names = list(config.get("top_journals", []))
-    top_aliases = list(config.get("top_journal_aliases", []))
     source_counts: dict[str, int] = {}
     for candidate in candidates:
         for source in candidate.get("source_labels", []):
             source_counts[str(source)] = source_counts.get(str(source), 0) + 1
+    candidate_top = [
+        bool(candidate.get("top_journal_candidate"))
+        or bool(assess_journal(candidate.get("journal"), config.journals, candidate.get("title"), candidate.get("abstract"), candidate.get("document_type_hint"))["top_journal"])
+        for candidate in candidates
+    ]
     candidate_stats = {
         "total": len(candidates),
         "formal": sum(not bool(x.get("is_preprint")) for x in candidates),
         "preprint": sum(bool(x.get("is_preprint")) for x in candidates),
-        "top_journal": sum(is_top_journal(x.get("journal"), top_names, top_aliases) for x in candidates),
+        "top_journal": sum(candidate_top),
+        "targeted_journal_hits": sum(bool(x.get("targeted_journal_hit")) for x in candidates),
         "sources": source_counts,
     }
     verified = verify_all(candidates, timeout=int(config.discovery.get("request_timeout_seconds", 30)))
     ds = config.deepseek
     ledger = BudgetLedger(args.usage, float(config.get("monthly_budget_cny")), float(ds.get("input_cny_per_million", 1)), float(ds.get("output_cny_per_million", 2)), issue_date)
-    analyzed, rejected = analyze_all(verified, DeepSeekClient(config, ledger), top_names, top_aliases)
-    selection = select(analyzed, history, issue_date, config)
+    client = DeepSeekClient(config, ledger)
+    screened, rejected = screen_all(verified, client, config.journals)
+    selection = select(screened, history, issue_date, config)
+    summarized = summarize_selected(selection, client)
     selection["excluded"] = rejected + selection["excluded"]
+    selection["rejection_summary"] = dict(Counter(item.get("reason", "unknown") for item in selection["excluded"]).most_common(10))
     selection["source_warnings"] = warnings
     selection["candidate_stats"] = candidate_stats
+    selection["model_stats"] = {"screened": len(verified), "eligible_after_screening": len(screened), "summarized": summarized}
     selection["budget"] = {"month": ledger.month_key, "estimated_spent_cny": ledger.spent(), "limit_cny": ledger.monthly_limit}
     html_body = render(selection, warnings)
     mail_subject = subject(args.mode, issue_date.isoformat(), len(selection["selected_formal"]))
@@ -69,7 +78,7 @@ def run(args: argparse.Namespace) -> dict[str, Any]:
     if sent and args.mode == "production":
         write_json_atomic(args.history, commit_history(history, selection, issue_date))
         history_committed = True
-    return {"issue_date": issue_date.isoformat(), "candidates": len(candidates), "candidate_stats": candidate_stats, "analyzed": len(analyzed), "formal": len(selection["selected_formal"]), "reviews": len(selection["selected_reviews"]), "preprints": len(selection["preprint_watchlist"]), "sent": sent, "history_committed": history_committed, "output": str(html_path), "budget_cny": ledger.spent(), "warnings": len(warnings)}
+    return {"issue_date": issue_date.isoformat(), "candidates": len(candidates), "candidate_stats": candidate_stats, "screened": len(screened), "summarized": summarized, "formal": len(selection["selected_formal"]), "reviews": len(selection["selected_reviews"]), "preprints": len(selection["preprint_watchlist"]), "sent": sent, "history_committed": history_committed, "output": str(html_path), "budget_cny": ledger.spent(), "warnings": len(warnings)}
 
 
 def parser() -> argparse.ArgumentParser:

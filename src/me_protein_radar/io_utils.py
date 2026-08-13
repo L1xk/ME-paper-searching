@@ -78,5 +78,51 @@ def is_top_journal(journal: Any, top_journals: list[str], aliases: list[str] | N
     return bool(journal_key(journal)) and journal_key(journal) in accepted
 
 
+def match_journal(journal: Any, catalog: list[dict[str, Any]]) -> dict[str, Any] | None:
+    key = journal_key(journal)
+    if not key:
+        return None
+    for item in catalog:
+        names = [item.get("name"), *(item.get("aliases") or [])]
+        if key in {journal_key(name) for name in names if name}:
+            return item
+    return None
+
+
+def assess_journal(
+    journal: Any,
+    catalog: list[dict[str, Any]],
+    title: Any = "",
+    evidence: Any = "",
+    document_type: Any = "",
+) -> dict[str, Any]:
+    matched = match_journal(journal, catalog)
+    if not matched:
+        return {
+            "canonical_name": clean_text(journal),
+            "journal_policy": "unlisted",
+            "journal_group": "unlisted",
+            "top_journal": False,
+            "journal_scope_terms": [],
+        }
+    policy = str(matched.get("policy"))
+    context = clean_text(f"{title} {evidence}").casefold()
+    scope_terms = [str(term) for term in matched.get("scope_terms", []) if str(term).casefold() in context]
+    is_review = clean_text(document_type).casefold() == "review" or "review" in clean_text(document_type).casefold()
+    if policy == "top":
+        top = True
+    elif policy == "review_top":
+        top = is_review
+    else:
+        top = bool(scope_terms)
+    return {
+        "canonical_name": str(matched["name"]),
+        "journal_policy": policy,
+        "journal_group": str(matched.get("group", "top")),
+        "top_journal": top,
+        "journal_scope_terms": scope_terms,
+    }
+
+
 def first_nonempty(*values: Any) -> Any:
     return next((value for value in values if value not in (None, "", [])), "")

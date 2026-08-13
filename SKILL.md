@@ -18,18 +18,19 @@ Use this Skill to maintain the self-contained GitHub-ready pipeline in this dire
 
 ## Required behavior
 
-1. Retrieve independently from configured public sources. Treat a source failure as a recorded degradation, not proof that no papers exist.
+1. Retrieve independently from configured public sources. Run topic queries plus source-appropriate Top-journal-targeted passes; parallelize by source while keeping requests within each source sequential. Treat a source failure as a recorded degradation, not proof that no papers exist.
 2. Merge by normalized DOI; use title plus first-author similarity only as a fallback.
 3. Apply cheap deterministic relevance filtering before model calls.
 4. Verify Europe PMC open full text when available; otherwise use the public abstract. Exclude metadata-only records.
-5. Use DeepSeek `deepseek-v4-flash`, non-thinking mode, for semantic screening, evidence extraction, and Chinese summary in one structured JSON call. Validate every response and retry malformed or empty JSON.
+5. Use DeepSeek `deepseek-v4-flash` in two stages: first run compact semantic/evidence screening for the candidate pool, then generate Chinese titles, reasons, and summaries only for the final 10–15 selected papers. Use non-thinking JSON mode, validate every response, and retry malformed or empty JSON.
 6. Enforce microbial scope. Exclude plant/animal work; allow microbial communities; allow cell-free work only when directly supporting enzyme engineering or pathway validation.
 7. Require original AI for Protein papers to contain a protein object, an AI method, a concrete protein task, and wet-lab validation. Reviews are exempt from the wet-lab rule. Downweight pure AI enzyme papers relative to metabolic engineering and integrated work.
 8. Disable preprint discovery and delivery. Exclude source-, type-, DOI-, or model-identified preprints before selection and never write them to history.
-9. Select 10–15 formal papers, including at least 2 Top-journal reviews, at least 8 configured Top-journal papers overall, and 7–8 historical papers from the rolling six-year window. Recent means publication within 30 days of the issue date.
+9. Select 10–15 formal papers, including at least 2 Top-journal reviews, at least 8 configured Top-journal papers overall, and 7–8 historical papers from the rolling six-year window. Recent means publication within 30 days of the issue date. When the qualified pool permits, keep each canonical journal to at most 2 papers and each research track to at most 4; relax only these diversity limits when required to satisfy harder quality quotas, and record the relaxation.
 10. Allow at most 2 non-Top original articles only when base_score is at least 94 and the supplied abstract/open-full-text evidence explicitly supports a configured exceptional novelty category. Label every exception and expose its evidence in the email. Routine optimization, unsupported first/novel wording, non-Top reviews, perspectives, and comments never qualify. Stop and alert when any quality gate is unmet.
-11. Generate Chinese summaries for all selected papers in static, no-JavaScript email HTML and expose candidate-pool diagnostics in the footer.
-12. Enforce the configured monthly CNY budget by reserving worst-case cost before each model attempt and settling with reported token usage. Stop and alert before exceeding the limit.
+11. Resolve journal aliases through `config/journals.json`. Treat conditional application journals as Top only when supplied evidence matches their configured scope terms, and treat review-only journals as Top only for reviews.
+12. Generate Chinese summaries for all selected papers in static, no-JavaScript email HTML and expose targeted-retrieval, two-stage-model, candidate-pool, and diversity diagnostics in the footer.
+13. Enforce the configured monthly CNY budget by reserving worst-case cost before each model attempt and settling with reported token usage. Stop and alert before exceeding the limit.
 
 ## Interactive literature support
 
@@ -50,10 +51,12 @@ If Python 3.11 is unavailable locally, Python 3.9 is sufficient for the current 
 ## Main files
 
 - `config/radar.json`: scope, quotas, source list, model, prices, and monthly budget.
+- `config/journals.json`: canonical journal names, aliases, Top policies, conditional scope terms, and targeted-search flags.
 - `src/me_protein_radar/discovery.py`: independent source adapters and cheap filtering.
 - `src/me_protein_radar/verification.py`: open-full-text/abstract degradation policy.
 - `src/me_protein_radar/deepseek.py`: structured model call and budget ledger.
 - `src/me_protein_radar/selection.py`: scoring, quotas, deduplication, and history transaction.
 - `src/me_protein_radar/render.py`: static responsive HTML.
 - `src/me_protein_radar/pipeline.py`: orchestration, delivery, and failure alert.
+- `scripts/discovery_audit.py`: read-only retrieval diagnostic without DeepSeek, SMTP, or history mutation.
 - `.github/workflows/weekly-radar.yml`: Monday 10:00 Beijing unattended schedule.

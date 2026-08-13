@@ -7,12 +7,13 @@ import re
 import time
 import urllib.parse
 import xml.etree.ElementTree as ET
+from concurrent.futures import ThreadPoolExecutor, as_completed
 from datetime import date, timedelta
 from typing import Any, Callable, Iterable
 
 from .config import RadarConfig
 from .http import request_bytes, request_json
-from .io_utils import RadarError, clean_text, first_nonempty, is_top_journal, normalize_doi, parse_date, rolling_years_before
+from .io_utils import RadarError, assess_journal, clean_text, first_nonempty, normalize_doi, parse_date, rolling_years_before
 
 
 Record = dict[str, Any]
@@ -27,6 +28,11 @@ POSITIVE_GROUPS = (
     {"yeast", "saccharomyces", "yarrowia", "pichia", "komagataella", "escherichia", "bacillus", "corynebacterium", "fungal", "bacterial"},
 )
 EXCLUDED_ONLY = {"mammalian", "mouse", "mice", "human", "plant", "arabidopsis", "animal"}
+HARD_EXCLUDE_TITLE_PHRASES = (
+    "nanozyme", "enzyme-like nanoparticle", "tumor therapy", "cancer therapy",
+    "clinical trial", "medical imaging", "mammalian cell", "cho cell",
+    "mouse model", "arabidopsis",
+)
 PREPRINT_TYPE_HINTS = {"posted-content", "preprint", "working-paper", "submitted"}
 PREPRINT_MARKERS = (
     "arxiv", "biorxiv", "medrxiv", "chemrxiv", "research square",
@@ -128,6 +134,7 @@ def merge_candidates(records: Iterable[Record]) -> list[Record]:
             match.update(replacement)
         match["source_labels"] = source_labels
         match["query_families"] = query_families
+        match["targeted_journal_hit"] = bool(match.get("targeted_journal_hit")) or bool(raw.get("targeted_journal_hit"))
         for field in ("abstract", "doi", "url", "journal", "publication_date", "pmid", "pmcid", "document_type_hint", "authors"):
             if not match.get(field) and raw.get(field):
                 match[field] = raw[field]
@@ -146,8 +153,16 @@ def cheap_relevance(record: Record) -> float:
     return group_hits * 10 + title_bonus * 3 + min(int(record.get("citation_count") or 0), 100) / 25 - (30 if excluded else 0)
 
 
-def crossref_search(query: str, from_date: date, until_date: date, rows: int, mailto: str, timeout: int, fetch: Fetcher = request_json) -> list[Record]:
-    params = {"query": query, "filter": f"from-pub-date:{from_date},until-pub-date:{until_date}", "rows": rows, "select": "DOI,title,author,container-title,published,abstract,type,URL,is-referenced-by-count"}
+def hard_exclusion_reason(record: Record) -> str:
+    title = clean_text(record.get("title")).casefold()
+    return next((phrase for phrase in HARD_EXCLUDE_TITLE_PHRASES if phrase in title), "")
+
+
+def crossref_search(query: str, from_date: date, until_date: date, rows: int, mailto: str, timeout: int, fetch: Fetcher = request_json, journal: str = "") -> list[Record]:
+    filters = [f"from-pub-date:{from_date}", f"until-pub-date:{until_date}"]
+    params = {"query.bibliographic": query, "filter": ",".join(filters), "rows": rows, "select": "DOI,title,author,container-title,published,abstract,type,URL,is-referenced-by-count"}
+    if journal:
+        params["query.container-title"] = journal
     if mailto:
         params["mailto"] = mailto
     url = "https://api.crossref.org/works?" + urllib.parse.urlencode(params)
@@ -265,6 +280,35 @@ def biorxiv_recent(from_date: date, until_date: date, rows: int, timeout: int, f
     return sorted(output, key=cheap_relevance, reverse=True)[:rows]
 
 
+def _groups(values: list[str], size: int) -> list[list[str]]:
+    return [values[index:index + max(1, size)] for index in range(0, len(values), max(1, size))]
+
+
+def build_targeted_search_specs(source: str, config: RadarConfig) -> list[dict[str, str]]:
+    settings = config.discovery.get("targeted_journal_search") or {}
+    if not settings.get("enabled", False):
+        return []
+    topic = clean_text(settings.get("topic_query"))
+    direct = [item for item in config.journals if item.get("direct_search")]
+    if source == "crossref":
+        limit = int(settings.get("crossref_max_journals", 12))
+        return [
+            {"name": f"targeted_top_{index:02d}", "query": topic, "journal": str(item["name"])}
+            for index, item in enumerate([item for item in direct if item.get("crossref_direct")][:limit], 1)
+        ]
+    if source not in {"pubmed", "europe_pmc"}:
+        return []
+    group_size = int(settings.get("group_size", 6))
+    specs = []
+    for index, names in enumerate(_groups([str(item["name"]) for item in direct], group_size), 1):
+        if source == "pubmed":
+            journal_clause = " OR ".join(f'"{name}"[Journal]' for name in names)
+        else:
+            journal_clause = " OR ".join(f'JOURNAL:"{name}"' for name in names)
+        specs.append({"name": f"targeted_top_{index:02d}", "query": f"({topic}) AND ({journal_clause})", "journal": ""})
+    return specs
+
+
 def discover(config: RadarConfig, issue_date: date, mailto: str) -> tuple[list[Record], list[str]]:
     settings = config.discovery
     rows = int(settings.get("rows_per_query", 20))
@@ -274,34 +318,73 @@ def discover(config: RadarConfig, issue_date: date, mailto: str) -> tuple[list[R
     records: list[Record] = []
     warnings: list[str] = []
     openalex_key = os.getenv("OPENALEX_API_KEY", "").strip()
+    targeted = settings.get("targeted_journal_search") or {}
+    targeted_rows_group = int(targeted.get("rows_per_group", rows))
+    targeted_rows_journal = int(targeted.get("rows_per_journal", min(rows, 15)))
     adapters = {
-        "crossref": lambda q: crossref_search(q, lower, issue_date, rows, mailto, timeout),
-        "pubmed": lambda q: pubmed_search(q, lower, issue_date, rows, mailto, timeout),
-        "europe_pmc": lambda q: europe_pmc_search(q, lower, issue_date, rows, timeout),
-        "openalex": lambda q: openalex_search(q, lower, issue_date, rows, mailto, timeout, openalex_key),
-        "arxiv": lambda q: arxiv_search(q, lower, issue_date, rows, timeout),
+        "crossref": lambda q, journal="", targeted_run=False: crossref_search(q, lower, issue_date, targeted_rows_journal if targeted_run else rows, mailto, timeout, journal=journal),
+        "pubmed": lambda q, journal="", targeted_run=False: pubmed_search(q, lower, issue_date, targeted_rows_group if targeted_run else rows, mailto, timeout),
+        "europe_pmc": lambda q, journal="", targeted_run=False: europe_pmc_search(q, lower, issue_date, targeted_rows_group if targeted_run else rows, timeout),
+        "openalex": lambda q, journal="", targeted_run=False: openalex_search(q, lower, issue_date, rows, mailto, timeout, openalex_key),
+        "arxiv": lambda q, journal="", targeted_run=False: arxiv_search(q, lower, issue_date, rows, timeout),
     }
     if "openalex" in sources and not openalex_key:
         warnings.append("openalex: OPENALEX_API_KEY 未配置，已跳过该来源")
         adapters.pop("openalex", None)
-    for family in settings.get("query_families", []):
-        query = family.get("query", "")
-        for name, adapter in adapters.items():
-            if name not in sources: continue
+    def run_source(name: str) -> tuple[list[Record], list[str]]:
+        source_records: list[Record] = []
+        source_warnings: list[str] = []
+        adapter = adapters[name]
+        specs = [
+            {"name": str(family.get("name", "query")), "query": str(family.get("query", "")), "journal": "", "targeted": False}
+            for family in settings.get("query_families", [])
+        ]
+        specs += [{**spec, "targeted": True} for spec in build_targeted_search_specs(name, config)]
+        for spec in specs:
             try:
-                found = adapter(query)
+                found = adapter(spec["query"], spec.get("journal", ""), bool(spec.get("targeted")))
                 for record in found:
-                    record["query_families"] = [str(family.get("name", "query"))]
-                records.extend(found)
+                    record["query_families"] = [str(spec["name"])]
+                    record["targeted_journal_hit"] = bool(spec.get("targeted"))
+                source_records.extend(found)
             except Exception as exc:
-                warnings.append(f"{name}/{family.get('name', 'query')}: {type(exc).__name__}: {exc}")
+                source_warnings.append(f"{name}/{spec['name']}: {type(exc).__name__}: {exc}")
+        return source_records, source_warnings
+
+    enabled = [name for name in adapters if name in sources]
+    workers = min(max(1, int(settings.get("source_workers", 4))), max(1, len(enabled)))
+    with ThreadPoolExecutor(max_workers=workers) as executor:
+        futures = {executor.submit(run_source, name): name for name in enabled}
+        for future in as_completed(futures):
+            name = futures[future]
+            try:
+                found, source_warnings = future.result()
+                records.extend(found)
+                warnings.extend(source_warnings)
+            except Exception as exc:
+                warnings.append(f"{name}/source: {type(exc).__name__}: {exc}")
     if "biorxiv" in sources:
         try:
             records.extend(biorxiv_recent(lower, issue_date, rows, timeout))
         except Exception as exc:
             warnings.append(f"biorxiv/recent: {type(exc).__name__}: {exc}")
     candidates = merge_candidates(records)
-    candidates = [item for item in candidates if item.get("abstract") and cheap_relevance(item) >= 16]
+    candidates = [
+        item for item in candidates
+        if item.get("abstract")
+        and not hard_exclusion_reason(item)
+        and cheap_relevance(item) >= (10 if item.get("targeted_journal_hit") else 16)
+    ]
+    for item in candidates:
+        type_hint = "review" if "reviews" in item.get("query_families", []) else item.get("document_type_hint", "")
+        journal = assess_journal(item.get("journal"), config.journals, item.get("title"), item.get("abstract"), type_hint)
+        item.update({
+            "canonical_journal": journal["canonical_name"],
+            "journal_policy": journal["journal_policy"],
+            "journal_group": journal["journal_group"],
+            "journal_scope_terms": journal["journal_scope_terms"],
+            "top_journal_candidate": journal["top_journal"],
+        })
     candidates.sort(key=lambda item: (cheap_relevance(item), int(item.get("citation_count") or 0)), reverse=True)
     limit = int(config.get("max_semantic_candidates", 80))
     preprint_limit = min(int(config.get("max_preprint_semantic_candidates", 12)), limit)
@@ -310,9 +393,7 @@ def discover(config: RadarConfig, issue_date: date, mailto: str) -> tuple[list[R
     preprint_candidates = [x for x in candidates if x.get("is_preprint")]
     reserved_preprints = preprint_candidates[:preprint_limit]
     formal_limit = max(0, limit - len(reserved_preprints))
-    top_names = list(config.get("top_journals", []))
-    top_aliases = list(config.get("top_journal_aliases", []))
-    top_formal = [x for x in formal_candidates if is_top_journal(x.get("journal"), top_names, top_aliases)]
+    top_formal = [x for x in formal_candidates if x.get("top_journal_candidate")]
     reviews = [x for x in formal_candidates if "review" in x.get("query_families", []) or "review" in str(x.get("document_type_hint", ""))]
     recent = [x for x in formal_candidates if (parse_date(x.get("publication_date")) or lower) >= recent_cutoff and x not in reviews]
     historical = [x for x in formal_candidates if x not in reviews and x not in recent]

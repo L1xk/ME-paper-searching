@@ -2,11 +2,12 @@ from __future__ import annotations
 
 import hashlib
 import re
+from collections import Counter
 from datetime import date, timedelta
 from typing import Any
 
 from .config import RadarConfig
-from .io_utils import RadarError, clean_text, normalize_doi, parse_date, rolling_years_before
+from .io_utils import RadarError, clean_text, journal_key, normalize_doi, parse_date, rolling_years_before
 
 
 TRACK_ADJUSTMENT = {"integrated": 8, "metabolic_engineering": 5, "enzyme_engineering": 2, "ai_protein": -5}
@@ -78,6 +79,46 @@ def _rank(items: list[dict[str, Any]]) -> list[dict[str, Any]]:
     return sorted(items, key=lambda x: (bool(x.get("top_journal")), float(x["final_score"]), x.get("publication_date", ""), int(x.get("citation_count") or 0)), reverse=True)
 
 
+def _venue_key(item: dict[str, Any]) -> str:
+    return journal_key(item.get("canonical_journal") or item.get("journal")) or "unknown"
+
+
+def _take_diverse(
+    pool: list[dict[str, Any]],
+    target: int,
+    selected: list[dict[str, Any]],
+    config: RadarConfig,
+) -> tuple[list[dict[str, Any]], list[str]]:
+    if target <= 0:
+        return [], []
+    chosen: list[dict[str, Any]] = []
+    relaxations: list[str] = []
+    selected_keys = {str(item.get("record_key")) for item in selected}
+    max_journal = int(config.get("max_same_journal", 2))
+    max_track = int(config.get("max_same_track", 4))
+    stages = [(True, True, "strict")]
+    if config.get("relax_diversity_to_meet_quotas", True):
+        stages += [(True, False, "track"), (False, False, "journal")]
+    for enforce_journal, enforce_track, label in stages:
+        for item in pool:
+            key = str(item.get("record_key"))
+            if key in selected_keys or item in chosen:
+                continue
+            current = selected + chosen
+            venue_counts = Counter(_venue_key(row) for row in current)
+            track_counts = Counter(str(row.get("track")) for row in current)
+            if enforce_journal and venue_counts[_venue_key(item)] >= max_journal:
+                continue
+            if enforce_track and track_counts[str(item.get("track"))] >= max_track:
+                continue
+            chosen.append(item)
+            if label != "strict":
+                relaxations.append(f"{label}:{clean_text(item.get('title'))}")
+            if len(chosen) >= target:
+                return chosen, relaxations
+    return chosen, relaxations
+
+
 def select(records: list[dict[str, Any]], history: dict[str, Any], issue_date: date, config: RadarConfig) -> dict[str, Any]:
     eligible: list[dict[str, Any]] = []
     excluded: list[dict[str, str]] = []
@@ -91,7 +132,8 @@ def select(records: list[dict[str, Any]], history: dict[str, Any], issue_date: d
     research = _rank([x for x in eligible if not x.get("is_preprint") and x.get("document_type") == "article"])
     review_min, review_max = int(config.get("review_min", 2)), int(config.get("review_max", 3))
     if len(reviews) < review_min: raise RadarError(f"Review quota unmet: found {len(reviews)}, need {review_min}")
-    chosen_reviews = reviews[:review_min]
+    chosen_reviews, diversity_relaxations = _take_diverse(reviews, review_min, [], config)
+    if len(chosen_reviews) < review_min: raise RadarError(f"Review quota unmet after diversity selection: found {len(chosen_reviews)}, need {review_min}")
     min_total, max_total = int(config.get("formal_min", 10)), int(config.get("formal_max", 15))
     hist_min, hist_max = int(config.get("historical_min", 7)), int(config.get("historical_max", 8))
     chosen: list[dict[str, Any]] = []
@@ -99,25 +141,36 @@ def select(records: list[dict[str, Any]], history: dict[str, Any], issue_date: d
     historical = [x for x in formal_pool if x["age_pool"] == "historical"]
     recent = [x for x in formal_pool if x["age_pool"] == "recent"]
     review_hist = sum(x["age_pool"] == "historical" for x in chosen_reviews)
-    chosen.extend(historical[:max(0, hist_max - review_hist)])
+    incoming, relaxed = _take_diverse(historical, max(0, hist_max - review_hist), chosen_reviews, config)
+    chosen.extend(incoming)
+    diversity_relaxations.extend(relaxed)
     needed = max(0, min_total - len(chosen_reviews) - len(chosen))
-    chosen.extend(recent[:needed])
+    incoming, relaxed = _take_diverse(recent, needed, chosen_reviews + chosen, config)
+    chosen.extend(incoming)
+    diversity_relaxations.extend(relaxed)
     if len(chosen) + len(chosen_reviews) < min_total:
-        for item in recent:
-            if item not in chosen and len(chosen) + len(chosen_reviews) < min_total: chosen.append(item)
+        incoming, relaxed = _take_diverse(recent, min_total - len(chosen) - len(chosen_reviews), chosen_reviews + chosen, config)
+        chosen.extend(incoming)
+        diversity_relaxations.extend(relaxed)
     if len(chosen) + len(chosen_reviews) < min_total:
-        for item in reviews[review_min:review_max]:
-            current_hist = sum(x["age_pool"] == "historical" for x in chosen + chosen_reviews)
-            if len(chosen) + len(chosen_reviews) < min_total and (item["age_pool"] != "historical" or current_hist < hist_max):
-                chosen_reviews.append(item)
+        current_hist = sum(x["age_pool"] == "historical" for x in chosen + chosen_reviews)
+        extra_review_pool = [item for item in reviews if item not in chosen_reviews and (item["age_pool"] != "historical" or current_hist < hist_max)]
+        extra_target = min(review_max - len(chosen_reviews), min_total - len(chosen) - len(chosen_reviews))
+        incoming, relaxed = _take_diverse(extra_review_pool, extra_target, chosen_reviews + chosen, config)
+        chosen_reviews.extend(incoming)
+        diversity_relaxations.extend(relaxed)
     current_hist = sum(x["age_pool"] == "historical" for x in chosen + chosen_reviews)
     if current_hist < hist_min and len(chosen_reviews) < review_max:
         historic_reviews = [x for x in reviews if x not in chosen_reviews and x["age_pool"] == "historical"]
         replaceable = [x for x in chosen if x["age_pool"] == "recent"]
-        for incoming, outgoing in zip(historic_reviews, replaceable):
+        for candidate, outgoing in zip(historic_reviews, replaceable):
             if current_hist >= hist_min or len(chosen_reviews) >= review_max: break
+            incoming_rows, relaxed = _take_diverse([candidate], 1, [x for x in chosen + chosen_reviews if x is not outgoing], config)
+            if not incoming_rows:
+                continue
             chosen.remove(outgoing)
-            chosen_reviews.append(incoming)
+            chosen_reviews.append(incoming_rows[0])
+            diversity_relaxations.extend(relaxed)
             current_hist += 1
     formal = _rank(chosen + chosen_reviews)[:max_total]
     if any(x.get("is_preprint") or x.get("document_type") == "preprint" for x in formal):
@@ -132,7 +185,21 @@ def select(records: list[dict[str, Any]], history: dict[str, Any], issue_date: d
     non_top_count = len(formal) - top_count
     non_top_max = int(config.get("exceptional_non_top_max", 0))
     if non_top_count > non_top_max: raise RadarError(f"Exceptional non-Top quota exceeded: found {non_top_count}, maximum {non_top_max}")
-    return {"issue_date": issue_date.isoformat(), "selected_formal": formal, "selected_research": [x for x in formal if x.get("document_type") == "article"], "selected_reviews": [x for x in formal if x.get("document_type") == "review"], "preprint_watchlist": [], "excluded": excluded}
+    venue_counts = Counter(_venue_key(item) for item in formal)
+    track_counts = Counter(str(item.get("track")) for item in formal)
+    return {
+        "issue_date": issue_date.isoformat(),
+        "selected_formal": formal,
+        "selected_research": [x for x in formal if x.get("document_type") == "article"],
+        "selected_reviews": [x for x in formal if x.get("document_type") == "review"],
+        "preprint_watchlist": [],
+        "excluded": excluded,
+        "diversity_summary": {
+            "journal_counts": dict(venue_counts),
+            "track_counts": dict(track_counts),
+            "relaxations": diversity_relaxations,
+        },
+    }
 
 
 def commit_history(history: dict[str, Any], selection: dict[str, Any], issue_date: date) -> dict[str, Any]:

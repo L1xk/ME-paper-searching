@@ -9,9 +9,9 @@ from pathlib import Path
 from unittest.mock import patch
 
 from me_protein_radar.config import RadarConfig
-from me_protein_radar.deepseek import BudgetLedger, DeepSeekClient, analyze_all
-from me_protein_radar.discovery import crossref_search, inverted_abstract, merge_candidates, normalize_record
-from me_protein_radar.io_utils import RadarError, is_top_journal
+from me_protein_radar.deepseek import BudgetLedger, DeepSeekClient, screen_all, summarize_selected
+from me_protein_radar.discovery import build_targeted_search_specs, crossref_search, hard_exclusion_reason, inverted_abstract, merge_candidates, normalize_record
+from me_protein_radar.io_utils import RadarError, assess_journal, is_top_journal
 from me_protein_radar.render import render, subject
 from me_protein_radar.pipeline import run
 from me_protein_radar.selection import commit_history, select
@@ -21,10 +21,10 @@ from me_protein_radar.verification import verify_candidate
 ROOT = Path(__file__).resolve().parents[1]
 
 
-def enriched(index: int, published: str, *, review: bool = False, track: str = "metabolic_engineering", wet_lab: bool = True, preprint: bool = False, top: bool = True, exceptional: bool = False, base_score: int = 84) -> dict:
+def enriched(index: int, published: str, *, review: bool = False, track: str = "metabolic_engineering", wet_lab: bool = True, preprint: bool = False, top: bool = True, exceptional: bool = False, base_score: int = 84, journal: str = "Metabolic Engineering") -> dict:
     return {
         "title": f"Engineering microbial pathway {index}", "title_zh": f"微生物通路工程 {index}",
-        "authors": [f"Author {index}"], "first_author": f"Author {index}", "journal": "Metabolic Engineering",
+        "authors": [f"Author {index}"], "first_author": f"Author {index}", "journal": journal, "canonical_journal": journal,
         "publication_date": published, "doi": f"10.9999/radar.{index}", "url": f"https://doi.org/10.9999/radar.{index}",
         "document_type": "preprint" if preprint else ("review" if review else "article"), "is_preprint": preprint, "track": track,
         "domain": "microbial", "cell_free_direct_support": False, "wet_lab": wet_lab,
@@ -60,6 +60,21 @@ class DiscoveryTests(unittest.TestCase):
         self.assertTrue(pubmed_preprint["is_preprint"])
         self.assertTrue(is_top_journal("Nat Commun", ["Nature Communications"], ["Nat Commun"]))
 
+    def test_targeted_queries_and_conditional_journal_policy(self):
+        config = RadarConfig.from_path(ROOT / "config" / "radar.json")
+        pubmed_specs = build_targeted_search_specs("pubmed", config)
+        crossref_specs = build_targeted_search_specs("crossref", config)
+        self.assertTrue(any("[Journal]" in item["query"] for item in pubmed_specs))
+        self.assertTrue(any(item["journal"] == "ACS Catalysis" for item in crossref_specs))
+        off_scope = assess_journal("J Agric Food Chem", config.journals, "Protein language model for antibody design", "computational prediction", "article")
+        in_scope = assess_journal("J Agric Food Chem", config.journals, "Enzyme engineering for food flavor biosynthesis", "microbial fermentation and biocatalysis", "article")
+        self.assertFalse(off_scope["top_journal"])
+        self.assertTrue(in_scope["top_journal"])
+        self.assertEqual(in_scope["canonical_name"], "Journal of Agricultural and Food Chemistry")
+        self.assertFalse(assess_journal("Trends Biotechnol", config.journals, document_type="article")["top_journal"])
+        self.assertTrue(assess_journal("Trends Biotechnol", config.journals, document_type="review")["top_journal"])
+        self.assertEqual(hard_exclusion_reason({"title": "Metal nanozyme for tumor therapy"}), "nanozyme")
+
     def test_fulltext_then_abstract_fallback(self):
         xml = b"<article><body><sec><title>Results</title><p>" + b"validated enzyme activity " * 40 + b"</p></sec></body></article>"
         full = verify_candidate({"abstract": "public abstract", "pmcid": "PMC1"}, fetch_bytes=lambda *a, **k: xml)
@@ -69,16 +84,21 @@ class DiscoveryTests(unittest.TestCase):
 
 
 class DeepSeekTests(unittest.TestCase):
-    def test_structured_result_and_budget(self):
+    def test_two_stage_structured_results_and_budget(self):
         with tempfile.TemporaryDirectory() as temp:
             path = Path(temp) / "usage.json"
             config = RadarConfig.from_path(ROOT / "config" / "radar.json")
             ledger = BudgetLedger(path, 20, 1, 2, date(2026, 8, 13))
-            result = {"eligible": True, "document_type": "article", "track": "integrated", "domain": "microbial", "cell_free_direct_support": False, "wet_lab": True, "host_or_object": "E. coli", "product_or_task": "product", "methods": ["ML", "assay"], "base_score": 90, "exceptional_novelty": False, "novelty_category": "none", "novelty_evidence_zh": "", "title_zh": "测试题目", "recommendation_reason_zh": "同时验证通路与酶改造。", "summary_zh": "研究使用模型筛选酶突变，并通过湿实验和微生物通路验证其作用。", "evidence_scope": "abstract", "uncertainty_note": ""}
-            response = {"choices": [{"message": {"content": json.dumps(result, ensure_ascii=False)}}], "usage": {"prompt_tokens": 1000, "completion_tokens": 500}}
-            client = DeepSeekClient(config, ledger, transport=lambda *a, **k: response, api_key="test-only")
-            self.assertTrue(client.analyze({"title": "x", "evidence_text": "evidence", "verification_level": "abstract"})["eligible"])
-            self.assertAlmostEqual(ledger.spent(), .002, places=6)
+            screen_result = {"eligible": True, "document_type": "article", "track": "integrated", "domain": "microbial", "cell_free_direct_support": False, "wet_lab": True, "host_or_object": "E. coli", "product_or_task": "product", "methods": ["ML", "assay"], "base_score": 90, "exceptional_novelty": False, "novelty_category": "none", "novelty_evidence_zh": "", "evidence_scope": "abstract", "uncertainty_note": ""}
+            summary_result = {"title_zh": "测试题目", "recommendation_reason_zh": "同时验证通路与酶改造。", "summary_zh": "研究使用模型筛选酶突变，并通过湿实验和微生物通路验证其作用。"}
+            responses = iter([screen_result, summary_result])
+            def transport(*args, **kwargs):
+                value = next(responses)
+                return {"choices": [{"message": {"content": json.dumps(value, ensure_ascii=False)}}], "usage": {"prompt_tokens": 1000, "completion_tokens": 500}}
+            client = DeepSeekClient(config, ledger, transport=transport, api_key="test-only")
+            self.assertTrue(client.screen({"title": "x", "evidence_text": "evidence", "verification_level": "abstract"})["eligible"])
+            self.assertEqual(client.summarize({"title": "x", "evidence_text": "evidence"})["title_zh"], "测试题目")
+            self.assertAlmostEqual(ledger.spent(), .004, places=6)
 
     def test_budget_guard(self):
         with tempfile.TemporaryDirectory() as temp:
@@ -88,13 +108,29 @@ class DeepSeekTests(unittest.TestCase):
             with self.assertRaises(RadarError): ledger.ensure_available(.001)
 
     def test_model_preprint_decision_is_conservative(self):
-        result = {"eligible": True, "document_type": "preprint", "track": "integrated", "domain": "microbial", "cell_free_direct_support": False, "wet_lab": True, "host_or_object": "E. coli", "product_or_task": "product", "methods": ["assay"], "base_score": 90, "exceptional_novelty": False, "novelty_category": "none", "novelty_evidence_zh": "", "title_zh": "测试题目", "recommendation_reason_zh": "证据充分。", "summary_zh": "研究通过实验验证微生物通路和酶工程。", "evidence_scope": "abstract", "uncertainty_note": ""}
-        client = type("Client", (), {"settings": {"model": "deepseek-v4-flash"}, "analyze": lambda self, record: result})()
+        result = {"eligible": True, "document_type": "preprint", "track": "integrated", "domain": "microbial", "cell_free_direct_support": False, "wet_lab": True, "host_or_object": "E. coli", "product_or_task": "product", "methods": ["assay"], "base_score": 90, "exceptional_novelty": False, "novelty_category": "none", "novelty_evidence_zh": "", "evidence_scope": "abstract", "uncertainty_note": ""}
+        client = type("Client", (), {"settings": {"model": "deepseek-v4-flash"}, "screen": lambda self, record: result})()
         record = enriched(99, "2026-08-01", top=False)
-        accepted, rejected = analyze_all([record], client, ["Nature Communications"])
+        config = RadarConfig.from_path(ROOT / "config" / "radar.json")
+        accepted, rejected = screen_all([record], client, config.journals)
         self.assertFalse(rejected)
         self.assertTrue(accepted[0]["is_preprint"])
         self.assertEqual(accepted[0]["document_type"], "preprint")
+
+    def test_only_final_selection_receives_long_summaries(self):
+        calls = []
+        summary = {"title_zh": "中文题目", "recommendation_reason_zh": "值得阅读。", "summary_zh": "这是仅为最终入选论文生成的中文速读摘要。"}
+        client = type("Client", (), {"settings": {"model": "deepseek-v4-flash"}, "summarize": lambda self, record: calls.append(record["title"]) or summary})()
+        selection = {
+            "selected_formal": [enriched(1, "2022-01-01"), enriched(2, "2026-08-01", review=True)],
+            "selected_research": [],
+            "selected_reviews": [],
+        }
+        self.assertEqual(summarize_selected(selection, client), 2)
+        self.assertEqual(len(calls), 2)
+        self.assertTrue(all(item["summary_validated"] for item in selection["selected_formal"]))
+        self.assertEqual(len(selection["selected_research"]), 1)
+        self.assertEqual(len(selection["selected_reviews"]), 1)
 
 
 class SelectionTests(unittest.TestCase):
@@ -161,6 +197,18 @@ class SelectionTests(unittest.TestCase):
         with self.assertRaisesRegex(RadarError, "Formal quota unmet"):
             select(papers, {"recommended": {}}, date(2026, 8, 17), config)
 
+    def test_diversity_limits_apply_when_candidate_pool_allows(self):
+        config = RadarConfig.from_path(ROOT / "config" / "radar.json")
+        journals = ["Metabolic Engineering", "ACS Catalysis", "Nature Communications", "Nature Biotechnology", "JACS"]
+        tracks = ["integrated", "metabolic_engineering", "enzyme_engineering"]
+        papers = [enriched(i, "2022-03-12", journal=journals[i % len(journals)], track=tracks[i % len(tracks)]) for i in range(1, 11)]
+        papers += [enriched(30, "2026-08-01", review=True, journal="Nature Reviews Chemistry"), enriched(31, "2026-08-02", review=True, journal="Trends in Biotechnology")]
+        papers += [enriched(40, "2026-08-05", journal="Advanced Science", track="integrated"), enriched(41, "2026-08-06", journal="Cell Systems", track="ai_protein")]
+        chosen = select(papers, {"recommended": {}}, date(2026, 8, 17), config)
+        self.assertLessEqual(max(chosen["diversity_summary"]["journal_counts"].values()), 2)
+        self.assertLessEqual(max(chosen["diversity_summary"]["track_counts"].values()), 4)
+        self.assertEqual(chosen["diversity_summary"]["relaxations"], [])
+
 
 class PipelineTests(unittest.TestCase):
     def test_history_changes_only_after_successful_production_send(self):
@@ -171,7 +219,7 @@ class PipelineTests(unittest.TestCase):
             history = base / "history.json"
             history.write_text('{"version":1,"recommended":{}}', encoding="utf-8")
             args = Namespace(config=ROOT / "config" / "radar.json", history=history, usage=base / "usage.json", output=base / "output", issue_date="2026-08-17", mode="production", dry_run=False, candidates=None)
-            with patch("me_protein_radar.pipeline.discover", return_value=(papers, [])), patch("me_protein_radar.pipeline.verify_all", side_effect=lambda rows, timeout: rows), patch("me_protein_radar.pipeline.DeepSeekClient", return_value=object()), patch("me_protein_radar.pipeline.analyze_all", return_value=(papers, [])), patch("me_protein_radar.pipeline.send_html") as sender:
+            with patch("me_protein_radar.pipeline.discover", return_value=(papers, [])), patch("me_protein_radar.pipeline.verify_all", side_effect=lambda rows, timeout: rows), patch("me_protein_radar.pipeline.DeepSeekClient", return_value=object()), patch("me_protein_radar.pipeline.screen_all", return_value=(papers, [])), patch("me_protein_radar.pipeline.summarize_selected", side_effect=lambda selection, client: len(selection["selected_formal"])), patch("me_protein_radar.pipeline.send_html") as sender:
                 result = run(args)
             self.assertTrue(result["history_committed"])
             self.assertTrue(sender.called)
@@ -179,7 +227,7 @@ class PipelineTests(unittest.TestCase):
 
             history.write_text('{"version":1,"recommended":{}}', encoding="utf-8")
             args.mode = "test"
-            with patch("me_protein_radar.pipeline.discover", return_value=(papers, [])), patch("me_protein_radar.pipeline.verify_all", side_effect=lambda rows, timeout: rows), patch("me_protein_radar.pipeline.DeepSeekClient", return_value=object()), patch("me_protein_radar.pipeline.analyze_all", return_value=(papers, [])), patch("me_protein_radar.pipeline.send_html"):
+            with patch("me_protein_radar.pipeline.discover", return_value=(papers, [])), patch("me_protein_radar.pipeline.verify_all", side_effect=lambda rows, timeout: rows), patch("me_protein_radar.pipeline.DeepSeekClient", return_value=object()), patch("me_protein_radar.pipeline.screen_all", return_value=(papers, [])), patch("me_protein_radar.pipeline.summarize_selected", side_effect=lambda selection, client: len(selection["selected_formal"])), patch("me_protein_radar.pipeline.send_html"):
                 result = run(args)
             self.assertFalse(result["history_committed"])
             self.assertEqual(json.loads(history.read_text(encoding="utf-8"))["recommended"], {})

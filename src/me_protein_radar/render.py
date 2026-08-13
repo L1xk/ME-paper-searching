@@ -59,13 +59,16 @@ def render(selection: dict[str, Any], warnings: list[str] | None = None) -> str:
         blocks += "".join(block(x, f"preprint-{i}", f"P{i}", preprint=True) for i, x in enumerate(preprints, 1))
     warning_text = "；".join((warnings or [])[:5])
     warning_html = f'<div style="margin-top:12px;color:#8a5a00">部分来源降级：{esc(warning_text)}</div>' if warning_text else ""
+    stats = selection.get("candidate_stats") or {}
+    stats_html = ""
+    if stats:
+        stats_html = f'<div style="margin-top:8px">候选池：正式 {int(stats.get("formal", 0))} · 预印本 {int(stats.get("preprint", 0))} · Top 期刊 {int(stats.get("top_journal", 0))}</div>'
     return f'''<!doctype html><html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>ME × Protein 周报</title></head><body style="margin:0;background:#eef2f5;font-family:Arial,'Microsoft YaHei',sans-serif;color:#26323d"><table role="presentation" width="100%" cellpadding="0" cellspacing="0"><tr><td align="center" style="padding:18px 8px"><table id="top" role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:680px;background:#f8fafb">
 <tr><td style="padding:28px 22px;background:#103c3a;color:#fff"><div style="font-size:14px;letter-spacing:1.6px;color:#bde7df">WEEKLY LITERATURE RADAR</div><h1 style="margin:8px 0 4px;font-size:32px">ME × Protein</h1><div style="font-size:15px;color:#d9efeb">{esc(selection['issue_date'])} · 微生物代谢工程与 AI 酶工程精选</div></td></tr>
 <tr><td style="padding:16px 14px;background:#fff"><table role="presentation" width="100%" cellspacing="6"><tr><td align="center" style="padding:12px;background:#e9f5f2"><div style="font-size:25px;font-weight:bold;color:#0b6b62">{len(formal)}</div><div style="font-size:12px">精选论文</div></td><td align="center" style="padding:12px;background:#fff4d6"><div style="font-size:25px;font-weight:bold;color:#8a5a00">{len(reviews)}</div><div style="font-size:12px">高质量综述</div></td></tr><tr><td align="center" style="padding:12px;background:#e9f5f2"><div style="font-size:25px;font-weight:bold;color:#0b6b62">{top_count}</div><div style="font-size:12px">Top 期刊</div></td><td align="center" style="padding:12px;background:#e9f5f2"><div style="font-size:25px;font-weight:bold;color:#0b6b62">{formal_zh} + {preprint_zh}</div><div style="font-size:12px">中文摘要（正式+预印本）</div></td></tr></table></td></tr>
 <tr><td style="padding:18px 22px;background:#fff;border-top:1px solid #e2e8ed"><h2 style="margin:0 0 10px">目录</h2>{''.join(toc)}</td></tr><tr><td style="padding:24px 14px 4px">{blocks}</td></tr>
-<tr><td style="padding:20px 22px 28px;font-size:12px;line-height:1.6;color:#6b7681">摘要级核验仅复述公开摘要明确支持的结论；开放全文仅使用合法公开来源；预印本未经同行评议。{warning_html}</td></tr></table></td></tr></table></body></html>'''
+<tr><td style="padding:20px 22px 28px;font-size:12px;line-height:1.6;color:#6b7681">摘要级核验仅复述公开摘要明确支持的结论；开放全文仅使用合法公开来源；预印本未经同行评议。{stats_html}{warning_html}</td></tr></table></td></tr></table></body></html>'''
 
 
 def subject(mode: str, issue_date: str, count: int) -> str:
     return ("[TEST] " if mode == "test" else "") + f"ME × Protein 周报 | {issue_date} | 精选 {count} 篇"
-

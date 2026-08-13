@@ -10,7 +10,7 @@ from typing import Any, Callable
 
 from .config import RadarConfig
 from .http import request_json
-from .io_utils import RadarError, clean_text, load_json, write_json_atomic
+from .io_utils import RadarError, clean_text, is_top_journal, load_json, write_json_atomic
 
 
 Transport = Callable[..., Any]
@@ -168,10 +168,9 @@ class DeepSeekClient:
         raise RadarError(f"DeepSeek structured analysis failed after {retries + 1} attempts: {last_error}")
 
 
-def analyze_all(records: list[dict[str, Any]], client: DeepSeekClient, top_journals: list[str]) -> tuple[list[dict[str, Any]], list[dict[str, str]]]:
+def analyze_all(records: list[dict[str, Any]], client: DeepSeekClient, top_journals: list[str], top_aliases: list[str] | None = None) -> tuple[list[dict[str, Any]], list[dict[str, str]]]:
     accepted: list[dict[str, Any]] = []
     rejected: list[dict[str, str]] = []
-    normalized_top = {clean_text(name).casefold() for name in top_journals}
     for record in records:
         if record.get("verification_level") == "metadata":
             rejected.append({"title": record.get("title", ""), "reason": "metadata-only"})
@@ -185,8 +184,9 @@ def analyze_all(records: list[dict[str, Any]], client: DeepSeekClient, top_journ
         merged["semantic_relevance_verified"] = True
         merged["summary_model"] = str(client.settings.get("model"))
         merged["summary_validated"] = True
-        merged["top_journal"] = clean_text(merged.get("journal")).casefold() in normalized_top
-        if merged.get("is_preprint"):
+        merged["top_journal"] = is_top_journal(merged.get("journal"), top_journals, top_aliases)
+        merged["is_preprint"] = bool(record.get("is_preprint")) or analysis.get("document_type") == "preprint"
+        if merged["is_preprint"]:
             merged["document_type"] = "preprint"
         accepted.append(merged)
     return accepted, rejected

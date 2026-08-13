@@ -68,6 +68,15 @@ def clean_text(value: Any) -> str:
     return re.sub(r"\s+", " ", str(value or "")).strip()
 
 
+def journal_key(value: Any) -> str:
+    return re.sub(r"[^a-z0-9]+", "", clean_text(value).casefold())
+
+
+def is_top_journal(journal: Any, top_journals: list[str], aliases: list[str] | None = None) -> bool:
+    accepted = {journal_key(name) for name in top_journals}
+    accepted.update(journal_key(name) for name in (aliases or []))
+    return bool(journal_key(journal)) and journal_key(journal) in accepted
+
+
 def first_nonempty(*values: Any) -> Any:
     return next((value for value in values if value not in (None, "", [])), "")
-

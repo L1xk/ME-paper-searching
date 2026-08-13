@@ -22,6 +22,10 @@ class RadarConfig:
             raise RadarError(f"Configuration is missing: {', '.join(missing)}")
         if not (0 <= int(raw["formal_min"]) <= int(raw["formal_max"])):
             raise RadarError("Invalid formal paper quota")
+        if not (0 <= int(raw.get("top_journal_min", 0)) <= int(raw["formal_max"])):
+            raise RadarError("Invalid Top journal quota")
+        if not (0 <= int(raw.get("max_preprint_semantic_candidates", 0)) <= int(raw.get("max_semantic_candidates", 80))):
+            raise RadarError("Invalid preprint candidate quota")
         if float(raw["monthly_budget_cny"]) <= 0:
             raise RadarError("monthly_budget_cny must be positive")
         return cls(raw)
@@ -36,4 +40,3 @@ class RadarConfig:
     @property
     def discovery(self) -> dict[str, Any]:
         return self.raw["discovery"]
-

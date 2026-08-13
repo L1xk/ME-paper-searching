@@ -9,9 +9,9 @@ from pathlib import Path
 from unittest.mock import patch
 
 from me_protein_radar.config import RadarConfig
-from me_protein_radar.deepseek import BudgetLedger, DeepSeekClient
-from me_protein_radar.discovery import crossref_search, inverted_abstract, merge_candidates
-from me_protein_radar.io_utils import RadarError
+from me_protein_radar.deepseek import BudgetLedger, DeepSeekClient, analyze_all
+from me_protein_radar.discovery import crossref_search, inverted_abstract, merge_candidates, normalize_record
+from me_protein_radar.io_utils import RadarError, is_top_journal
 from me_protein_radar.render import render, subject
 from me_protein_radar.pipeline import run
 from me_protein_radar.selection import commit_history, select
@@ -21,17 +21,17 @@ from me_protein_radar.verification import verify_candidate
 ROOT = Path(__file__).resolve().parents[1]
 
 
-def enriched(index: int, published: str, *, review: bool = False, track: str = "metabolic_engineering", wet_lab: bool = True) -> dict:
+def enriched(index: int, published: str, *, review: bool = False, track: str = "metabolic_engineering", wet_lab: bool = True, preprint: bool = False, top: bool = True) -> dict:
     return {
         "title": f"Engineering microbial pathway {index}", "title_zh": f"微生物通路工程 {index}",
         "authors": [f"Author {index}"], "first_author": f"Author {index}", "journal": "Metabolic Engineering",
         "publication_date": published, "doi": f"10.9999/radar.{index}", "url": f"https://doi.org/10.9999/radar.{index}",
-        "document_type": "review" if review else "article", "is_preprint": False, "track": track,
+        "document_type": "preprint" if preprint else ("review" if review else "article"), "is_preprint": preprint, "track": track,
         "domain": "microbial", "cell_free_direct_support": False, "wet_lab": wet_lab,
         "host_or_object": "Escherichia coli", "product_or_task": "biosynthesis", "methods": ["pathway engineering"],
         "base_score": 84, "recommendation_reason_zh": "工程路径明确，证据充分。", "summary_zh": "研究构建并验证微生物合成通路，结果支持其工程价值。",
         "evidence_scope": "abstract", "uncertainty_note": "", "verification_level": "abstract", "verification_note": "公开摘要核验",
-        "semantic_relevance_verified": True, "summary_model": "deepseek-v4-flash", "summary_validated": True, "source_labels": ["PubMed"], "top_journal": True,
+        "semantic_relevance_verified": True, "summary_model": "deepseek-v4-flash", "summary_validated": True, "source_labels": ["bioRxiv" if preprint else "PubMed"], "top_journal": top,
     }
 
 
@@ -46,6 +46,19 @@ class DiscoveryTests(unittest.TestCase):
         self.assertEqual(len(merged), 1)
         self.assertEqual(merged[0]["source_labels"], ["Crossref", "OpenAlex"])
         self.assertEqual(inverted_abstract({"enzyme": [1], "engineered": [2], "We": [0]}), "We enzyme engineered")
+
+    def test_crossref_preprint_detection_and_formal_upgrade(self):
+        response = {"message": {"items": [{"DOI": "10.1101/2026.01.01.1", "title": ["AI-guided microbial enzyme engineering"], "author": [{"given": "A", "family": "Li"}], "container-title": ["bioRxiv"], "published": {"date-parts": [[2026, 7, 1]]}, "abstract": "Microbial enzyme design and wet-lab validation.", "type": "posted-content", "URL": "https://biorxiv.org/content/1"}]}}
+        preprint = crossref_search("query", date(2020, 1, 1), date(2026, 8, 1), 10, "a@example.com", 3, fetch=lambda *a, **k: response)[0]
+        self.assertTrue(preprint["is_preprint"])
+        formal = dict(preprint, doi="10.9999/formal.1", journal="Nature Communications", url="https://doi.org/10.9999/formal.1", document_type_hint="journal-article", is_preprint=False, source_labels=["PubMed"])
+        merged = merge_candidates([preprint, formal])
+        self.assertEqual(len(merged), 1)
+        self.assertFalse(merged[0]["is_preprint"])
+        self.assertEqual(merged[0]["journal"], "Nature Communications")
+        pubmed_preprint = normalize_record({"title": "x", "journal": "PubMed", "document_type_hint": "Preprint"}, "PubMed")
+        self.assertTrue(pubmed_preprint["is_preprint"])
+        self.assertTrue(is_top_journal("Nat Commun", ["Nature Communications"], ["Nat Commun"]))
 
     def test_fulltext_then_abstract_fallback(self):
         xml = b"<article><body><sec><title>Results</title><p>" + b"validated enzyme activity " * 40 + b"</p></sec></body></article>"
@@ -74,6 +87,15 @@ class DeepSeekTests(unittest.TestCase):
             ledger = BudgetLedger(path, 20, 1, 2, date(2026, 8, 13))
             with self.assertRaises(RadarError): ledger.ensure_available(.001)
 
+    def test_model_preprint_decision_is_conservative(self):
+        result = {"eligible": True, "document_type": "preprint", "track": "integrated", "domain": "microbial", "cell_free_direct_support": False, "wet_lab": True, "host_or_object": "E. coli", "product_or_task": "product", "methods": ["assay"], "base_score": 90, "title_zh": "测试题目", "recommendation_reason_zh": "证据充分。", "summary_zh": "研究通过实验验证微生物通路和酶工程。", "evidence_scope": "abstract", "uncertainty_note": ""}
+        client = type("Client", (), {"settings": {"model": "deepseek-v4-flash"}, "analyze": lambda self, record: result})()
+        record = enriched(99, "2026-08-01", top=False)
+        accepted, rejected = analyze_all([record], client, ["Nature Communications"])
+        self.assertFalse(rejected)
+        self.assertTrue(accepted[0]["is_preprint"])
+        self.assertEqual(accepted[0]["document_type"], "preprint")
+
 
 class SelectionTests(unittest.TestCase):
     def test_quotas_render_and_history_transaction(self):
@@ -96,6 +118,22 @@ class SelectionTests(unittest.TestCase):
         self.assertEqual(history["recommended"], {})
         committed = commit_history(history, chosen, date(2026, 8, 17))
         self.assertEqual(len(committed["recommended"]), len(chosen["selected_formal"]))
+
+    def test_preprints_never_enter_formal_and_are_capped(self):
+        config = RadarConfig.from_path(ROOT / "config" / "radar.json")
+        papers = [enriched(i, f"{2020 + i % 5}-03-12") for i in range(1, 10)]
+        papers += [enriched(20, "2026-08-01", review=True), enriched(21, "2026-08-02", review=True)]
+        papers += [enriched(i, "2026-08-05", preprint=True, top=False) for i in range(30, 40)]
+        chosen = select(papers, {"recommended": {}}, date(2026, 8, 17), config)
+        self.assertFalse(any(x["is_preprint"] for x in chosen["selected_formal"]))
+        self.assertEqual(len(chosen["preprint_watchlist"]), int(config.get("preprint_max")))
+
+    def test_zero_top_journals_blocks_delivery(self):
+        config = RadarConfig.from_path(ROOT / "config" / "radar.json")
+        papers = [enriched(i, f"{2020 + i % 5}-03-12", top=False) for i in range(1, 10)]
+        papers += [enriched(20, "2026-08-01", review=True, top=False), enriched(21, "2026-08-02", review=True, top=False)]
+        with self.assertRaisesRegex(RadarError, "Top journal quota unmet"):
+            select(papers, {"recommended": {}}, date(2026, 8, 17), config)
 
     def test_historical_max_is_never_broken_to_fill(self):
         config = RadarConfig.from_path(ROOT / "config" / "radar.json")

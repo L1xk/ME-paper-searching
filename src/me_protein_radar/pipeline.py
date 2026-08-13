@@ -12,7 +12,7 @@ from zoneinfo import ZoneInfo
 from .config import RadarConfig
 from .deepseek import BudgetLedger, DeepSeekClient, analyze_all
 from .discovery import discover
-from .io_utils import RadarError, load_json, write_json_atomic
+from .io_utils import RadarError, is_top_journal, load_json, write_json_atomic
 from .mailer import send_alert, send_html
 from .render import render, subject
 from .selection import commit_history, select
@@ -31,13 +31,27 @@ def run(args: argparse.Namespace) -> dict[str, Any]:
         warnings: list[str] = []
     else:
         candidates, warnings = discover(config, issue_date, mailto)
+    top_names = list(config.get("top_journals", []))
+    top_aliases = list(config.get("top_journal_aliases", []))
+    source_counts: dict[str, int] = {}
+    for candidate in candidates:
+        for source in candidate.get("source_labels", []):
+            source_counts[str(source)] = source_counts.get(str(source), 0) + 1
+    candidate_stats = {
+        "total": len(candidates),
+        "formal": sum(not bool(x.get("is_preprint")) for x in candidates),
+        "preprint": sum(bool(x.get("is_preprint")) for x in candidates),
+        "top_journal": sum(is_top_journal(x.get("journal"), top_names, top_aliases) for x in candidates),
+        "sources": source_counts,
+    }
     verified = verify_all(candidates, timeout=int(config.discovery.get("request_timeout_seconds", 30)))
     ds = config.deepseek
     ledger = BudgetLedger(args.usage, float(config.get("monthly_budget_cny")), float(ds.get("input_cny_per_million", 1)), float(ds.get("output_cny_per_million", 2)), issue_date)
-    analyzed, rejected = analyze_all(verified, DeepSeekClient(config, ledger), list(config.get("top_journals", [])))
+    analyzed, rejected = analyze_all(verified, DeepSeekClient(config, ledger), top_names, top_aliases)
     selection = select(analyzed, history, issue_date, config)
     selection["excluded"] = rejected + selection["excluded"]
     selection["source_warnings"] = warnings
+    selection["candidate_stats"] = candidate_stats
     selection["budget"] = {"month": ledger.month_key, "estimated_spent_cny": ledger.spent(), "limit_cny": ledger.monthly_limit}
     html_body = render(selection, warnings)
     mail_subject = subject(args.mode, issue_date.isoformat(), len(selection["selected_formal"]))
@@ -55,7 +69,7 @@ def run(args: argparse.Namespace) -> dict[str, Any]:
     if sent and args.mode == "production":
         write_json_atomic(args.history, commit_history(history, selection, issue_date))
         history_committed = True
-    return {"issue_date": issue_date.isoformat(), "candidates": len(candidates), "analyzed": len(analyzed), "formal": len(selection["selected_formal"]), "reviews": len(selection["selected_reviews"]), "preprints": len(selection["preprint_watchlist"]), "sent": sent, "history_committed": history_committed, "output": str(html_path), "budget_cny": ledger.spent(), "warnings": len(warnings)}
+    return {"issue_date": issue_date.isoformat(), "candidates": len(candidates), "candidate_stats": candidate_stats, "analyzed": len(analyzed), "formal": len(selection["selected_formal"]), "reviews": len(selection["selected_reviews"]), "preprints": len(selection["preprint_watchlist"]), "sent": sent, "history_committed": history_committed, "output": str(html_path), "budget_cny": ledger.spent(), "warnings": len(warnings)}
 
 
 def parser() -> argparse.ArgumentParser:

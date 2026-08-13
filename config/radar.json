@@ -8,9 +8,12 @@
   "historical_max": 8,
   "review_min": 2,
   "review_max": 3,
-  "preprint_max": 5,
+  "top_journal_min": 2,
+  "top_journal_bonus": 8,
+  "preprint_max": 2,
   "score_threshold": 72,
   "max_semantic_candidates": 80,
+  "max_preprint_semantic_candidates": 4,
   "monthly_budget_cny": 20,
   "deepseek": {
     "base_url": "https://api.deepseek.com",
@@ -22,7 +25,7 @@
     "output_cny_per_million": 2.0
   },
   "discovery": {
-    "rows_per_query": 20,
+    "rows_per_query": 30,
     "request_timeout_seconds": 30,
     "sources": ["crossref", "pubmed", "europe_pmc", "openalex", "arxiv", "biorxiv"],
     "query_families": [
@@ -77,6 +80,26 @@
     "Green Chemistry",
     "Bioresource Technology",
     "Chemical Engineering Journal"
+  ],
+  "top_journal_aliases": [
+    "Nat Biotechnol",
+    "Nat Catal",
+    "Nat Chem Biol",
+    "Nat Commun",
+    "Sci Adv",
+    "Cell Syst",
+    "Proc Natl Acad Sci U S A",
+    "J Am Chem Soc",
+    "Angew Chem Int Ed Engl",
+    "Angewandte Chemie (International ed. in English)",
+    "Proceedings of the National Academy of Sciences of the United States of America",
+    "Metab Eng",
+    "Adv Sci (Weinh)",
+    "Advanced science (Weinheim, Baden-Wurttemberg, Germany)",
+    "ACS Catal",
+    "J Agric Food Chem",
+    "Green Chem",
+    "Bioresour Technol",
+    "Chem Eng J"
   ]
 }
-

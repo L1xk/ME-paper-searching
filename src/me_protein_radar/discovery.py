@@ -12,7 +12,7 @@ from typing import Any, Callable, Iterable
 
 from .config import RadarConfig
 from .http import request_bytes, request_json
-from .io_utils import RadarError, clean_text, first_nonempty, normalize_doi, parse_date, rolling_years_before
+from .io_utils import RadarError, clean_text, first_nonempty, is_top_journal, normalize_doi, parse_date, rolling_years_before
 
 
 Record = dict[str, Any]
@@ -27,6 +27,12 @@ POSITIVE_GROUPS = (
     {"yeast", "saccharomyces", "yarrowia", "pichia", "komagataella", "escherichia", "bacillus", "corynebacterium", "fungal", "bacterial"},
 )
 EXCLUDED_ONLY = {"mammalian", "mouse", "mice", "human", "plant", "arabidopsis", "animal"}
+PREPRINT_TYPE_HINTS = {"posted-content", "preprint", "working-paper", "submitted"}
+PREPRINT_MARKERS = (
+    "arxiv", "biorxiv", "medrxiv", "chemrxiv", "research square",
+    "preprints.org", "ssrn", "osf preprints",
+)
+PREPRINT_DOI_PREFIXES = ("10.1101/", "10.21203/rs.3.rs-", "10.26434/chemrxiv", "10.20944/preprints")
 _LAST_ARXIV_REQUEST = 0.0
 
 
@@ -46,6 +52,22 @@ def date_parts(value: Any) -> str:
         return ""
 
 
+def preprint_from_metadata(raw: Record, source: str = "") -> bool:
+    if bool(raw.get("is_preprint")):
+        return True
+    hint = clean_text(raw.get("document_type_hint")).casefold()
+    if hint in PREPRINT_TYPE_HINTS or "preprint" in hint or "posted" in hint:
+        return True
+    doi = normalize_doi(raw.get("doi"))
+    if any(doi.startswith(prefix) for prefix in PREPRINT_DOI_PREFIXES):
+        return True
+    haystack = " ".join(
+        clean_text(value).casefold()
+        for value in (source, raw.get("journal"), raw.get("url"), raw.get("publisher"))
+    )
+    return any(marker in haystack for marker in PREPRINT_MARKERS)
+
+
 def normalize_record(raw: Record, source: str) -> Record:
     title = strip_markup(raw.get("title"))
     abstract = strip_markup(raw.get("abstract"))
@@ -61,7 +83,7 @@ def normalize_record(raw: Record, source: str) -> Record:
         "doi": normalize_doi(raw.get("doi")),
         "url": clean_text(raw.get("url")),
         "document_type_hint": clean_text(raw.get("document_type_hint")).lower(),
-        "is_preprint": bool(raw.get("is_preprint")),
+        "is_preprint": preprint_from_metadata(raw, source),
         "pmid": clean_text(raw.get("pmid")),
         "pmcid": clean_text(raw.get("pmcid")),
         "citation_count": int(raw.get("citation_count") or 0),
@@ -96,11 +118,20 @@ def merge_candidates(records: Iterable[Record]) -> list[Record]:
         if match is None:
             merged.append(dict(raw))
             continue
-        match["source_labels"] = sorted(set(match.get("source_labels", []) + raw.get("source_labels", [])))
-        match["query_families"] = sorted(set(match.get("query_families", []) + raw.get("query_families", [])))
+        source_labels = sorted(set(match.get("source_labels", []) + raw.get("source_labels", [])))
+        query_families = sorted(set(match.get("query_families", []) + raw.get("query_families", [])))
+        match_preprint = bool(match.get("is_preprint"))
+        raw_preprint = bool(raw.get("is_preprint"))
+        if match_preprint and not raw_preprint:
+            replacement = dict(raw)
+            match.clear()
+            match.update(replacement)
+        match["source_labels"] = source_labels
+        match["query_families"] = query_families
         for field in ("abstract", "doi", "url", "journal", "publication_date", "pmid", "pmcid", "document_type_hint", "authors"):
             if not match.get(field) and raw.get(field):
                 match[field] = raw[field]
+        match["is_preprint"] = match_preprint and raw_preprint
         match["citation_count"] = max(int(match.get("citation_count") or 0), int(raw.get("citation_count") or 0))
     return merged
 
@@ -116,7 +147,7 @@ def cheap_relevance(record: Record) -> float:
 
 
 def crossref_search(query: str, from_date: date, until_date: date, rows: int, mailto: str, timeout: int, fetch: Fetcher = request_json) -> list[Record]:
-    params = {"query": query, "filter": f"from-pub-date:{from_date},until-pub-date:{until_date}", "rows": rows, "select": "DOI,title,author,container-title,published,abstract,type,URL,language,is-referenced-by-count"}
+    params = {"query": query, "filter": f"from-pub-date:{from_date},until-pub-date:{until_date}", "rows": rows, "select": "DOI,title,author,container-title,published,abstract,type,URL,is-referenced-by-count"}
     if mailto:
         params["mailto"] = mailto
     url = "https://api.crossref.org/works?" + urllib.parse.urlencode(params)
@@ -130,7 +161,12 @@ def crossref_search(query: str, from_date: date, until_date: date, rows: int, ma
 
 def pubmed_search(query: str, from_date: date, until_date: date, rows: int, mailto: str, timeout: int, fetch_bytes: Fetcher = request_bytes) -> list[Record]:
     term = f"({query}) AND ({from_date:%Y/%m/%d}[Date - Publication] : {until_date:%Y/%m/%d}[Date - Publication])"
-    common = {"tool": "me_protein_radar", "email": mailto, "api_key": os.getenv("NCBI_API_KEY", "")}
+    common = {"tool": "me_protein_radar"}
+    if mailto:
+        common["email"] = mailto
+    ncbi_key = os.getenv("NCBI_API_KEY", "").strip()
+    if ncbi_key:
+        common["api_key"] = ncbi_key
     search_url = "https://eutils.ncbi.nlm.nih.gov/entrez/eutils/esearch.fcgi?" + urllib.parse.urlencode({**common, "db": "pubmed", "retmode": "json", "retmax": rows, "term": term})
     search_data = request_json(search_url, timeout=timeout) if fetch_bytes is request_bytes else __import__("json").loads(fetch_bytes(search_url, timeout=timeout).decode())
     ids = search_data.get("esearchresult", {}).get("idlist", [])
@@ -159,7 +195,8 @@ def pubmed_search(query: str, from_date: date, until_date: date, rows: int, mail
         month_map = {name: index for index, name in enumerate("Jan Feb Mar Apr May Jun Jul Aug Sep Oct Nov Dec".split(), 1)}
         month = str(month_map.get(month[:3].title(), month))
         types = [node.text or "" for node in art.findall("PublicationTypeList/PublicationType")]
-        output.append(normalize_record({"title": title, "abstract": abstract, "authors": authors, "journal": art.findtext("Journal/Title", ""), "publication_date": f"{year}-{month}-{day}" if year else "", "doi": doi, "url": f"https://pubmed.ncbi.nlm.nih.gov/{medline.findtext('PMID', '')}/", "pmid": medline.findtext("PMID", ""), "pmcid": pmcid, "document_type_hint": "review" if any("review" in t.lower() for t in types) else "article"}, "PubMed"))
+        type_hint = "preprint" if any("preprint" in t.lower() for t in types) else ("review" if any("review" in t.lower() for t in types) else "article")
+        output.append(normalize_record({"title": title, "abstract": abstract, "authors": authors, "journal": art.findtext("Journal/Title", ""), "publication_date": f"{year}-{month}-{day}" if year else "", "doi": doi, "url": f"https://pubmed.ncbi.nlm.nih.gov/{medline.findtext('PMID', '')}/", "pmid": medline.findtext("PMID", ""), "pmcid": pmcid, "document_type_hint": type_hint}, "PubMed"))
     return output
 
 
@@ -267,12 +304,23 @@ def discover(config: RadarConfig, issue_date: date, mailto: str) -> tuple[list[R
     candidates = [item for item in candidates if item.get("abstract") and cheap_relevance(item) >= 16]
     candidates.sort(key=lambda item: (cheap_relevance(item), int(item.get("citation_count") or 0)), reverse=True)
     limit = int(config.get("max_semantic_candidates", 80))
+    preprint_limit = min(int(config.get("max_preprint_semantic_candidates", 12)), limit)
     recent_cutoff = issue_date - timedelta(days=int(config.get("recent_days", 30)))
-    reviews = [x for x in candidates if "review" in x.get("query_families", []) or "review" in str(x.get("document_type_hint", ""))]
-    recent = [x for x in candidates if (parse_date(x.get("publication_date")) or lower) >= recent_cutoff and x not in reviews]
-    historical = [x for x in candidates if x not in reviews and x not in recent]
-    reserved = reviews[: min(20, limit)] + recent[: min(25, max(0, limit - 20))]
-    reserved += historical[: max(0, limit - len(reserved))]
-    if len(reserved) < limit:
-        reserved += [x for x in candidates if x not in reserved][: limit - len(reserved)]
-    return reserved[:limit], warnings
+    formal_candidates = [x for x in candidates if not x.get("is_preprint")]
+    preprint_candidates = [x for x in candidates if x.get("is_preprint")]
+    reserved_preprints = preprint_candidates[:preprint_limit]
+    formal_limit = max(0, limit - len(reserved_preprints))
+    top_names = list(config.get("top_journals", []))
+    top_aliases = list(config.get("top_journal_aliases", []))
+    top_formal = [x for x in formal_candidates if is_top_journal(x.get("journal"), top_names, top_aliases)]
+    reviews = [x for x in formal_candidates if "review" in x.get("query_families", []) or "review" in str(x.get("document_type_hint", ""))]
+    recent = [x for x in formal_candidates if (parse_date(x.get("publication_date")) or lower) >= recent_cutoff and x not in reviews]
+    historical = [x for x in formal_candidates if x not in reviews and x not in recent]
+    reserved: list[Record] = []
+    for pool, quota in ((top_formal, 25), (reviews, 20), (recent, 20), (historical, formal_limit)):
+        for item in pool:
+            if item not in reserved and len(reserved) < formal_limit and sum(x in pool for x in reserved) < quota:
+                reserved.append(item)
+    if len(reserved) < formal_limit:
+        reserved += [x for x in formal_candidates if x not in reserved][: formal_limit - len(reserved)]
+    return reserved[:formal_limit] + reserved_preprints, warnings

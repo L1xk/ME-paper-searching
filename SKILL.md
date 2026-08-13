@@ -25,9 +25,10 @@ Use this Skill to maintain the self-contained GitHub-ready pipeline in this dire
 5. Use DeepSeek `deepseek-v4-flash`, non-thinking mode, for semantic screening, evidence extraction, and Chinese summary in one structured JSON call. Validate every response and retry malformed or empty JSON.
 6. Enforce microbial scope. Exclude plant/animal work; allow microbial communities; allow cell-free work only when directly supporting enzyme engineering or pathway validation.
 7. Require original AI for Protein papers to contain a protein object, an AI method, a concrete protein task, and wet-lab validation. Reviews are exempt from the wet-lab rule. Downweight pure AI enzyme papers relative to metabolic engineering and integrated work.
-8. Select 10–15 formal papers, including at least 2 reviews and 7–8 historical papers from the rolling six-year window. Recent means publication within 30 days of the issue date. Keep preprints in a separate watchlist.
-9. Generate Chinese summaries for all selected formal papers and preprints; report their counts separately in static, no-JavaScript email HTML.
-10. Enforce the configured monthly CNY budget by reserving worst-case cost before each model attempt and settling with reported token usage. Stop and alert before exceeding the limit.
+8. Classify preprints deterministically from source platform, Crossref type, DOI patterns, and model output. Split formal and preprint candidates before model calls; never use a preprint to fill a formal quota.
+9. Select 10–15 formal papers, including at least 2 reviews, at least 2 configured Top-journal papers, and 7–8 historical papers from the rolling six-year window. Recent means publication within 30 days of the issue date. Keep at most 2 preprints in a separate watchlist and at most 4 preprints in the model candidate pool. Stop and alert when a formal quality gate is unmet.
+10. Generate Chinese summaries for all selected formal papers and preprints; report their counts separately in static, no-JavaScript email HTML and expose candidate-pool diagnostics in the footer.
+11. Enforce the configured monthly CNY budget by reserving worst-case cost before each model attempt and settling with reported token usage. Stop and alert before exceeding the limit.
 
 ## Interactive literature support
 
@@ -55,4 +56,3 @@ If Python 3.11 is unavailable locally, Python 3.9 is sufficient for the current 
 - `src/me_protein_radar/render.py`: static responsive HTML.
 - `src/me_protein_radar/pipeline.py`: orchestration, delivery, and failure alert.
 - `.github/workflows/weekly-radar.yml`: Monday 10:00 Beijing unattended schedule.
-

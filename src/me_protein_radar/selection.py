@@ -40,6 +40,9 @@ def seen(record: dict[str, Any], history: dict[str, Any]) -> bool:
 
 def prepare(record: dict[str, Any], issue_date: date, config: RadarConfig) -> tuple[dict[str, Any] | None, str]:
     item = dict(record)
+    item["is_preprint"] = bool(item.get("is_preprint")) or item.get("document_type") == "preprint"
+    if item["is_preprint"]:
+        item["document_type"] = "preprint"
     published = parse_date(item.get("publication_date"))
     if not published or not rolling_years_before(issue_date, int(config.get("rolling_years", 6))) <= published <= issue_date:
         return None, "outside rolling six-year window"
@@ -48,7 +51,8 @@ def prepare(record: dict[str, Any], issue_date: date, config: RadarConfig) -> tu
     if item.get("verification_level") == "metadata": return None, "metadata-only"
     if item.get("track") == "ai_protein" and item.get("document_type") not in {"review"} and not item.get("wet_lab"):
         return None, "AI for Protein lacks wet-lab validation"
-    score = float(item.get("base_score", 0)) + TRACK_ADJUSTMENT.get(str(item.get("track")), -30) + TYPE_ADJUSTMENT.get(str(item.get("document_type")), 0)
+    top_bonus = float(config.get("top_journal_bonus", 8)) if item.get("top_journal") and not item["is_preprint"] else 0
+    score = float(item.get("base_score", 0)) + TRACK_ADJUSTMENT.get(str(item.get("track")), -30) + TYPE_ADJUSTMENT.get(str(item.get("document_type")), 0) + top_bonus
     item["final_score"] = round(min(100, max(0, score)), 2)
     if item["final_score"] < float(config.get("score_threshold", 72)): return None, "below score threshold"
     if not (item.get("doi") or item.get("url")): return None, "missing stable link"
@@ -70,7 +74,7 @@ def select(records: list[dict[str, Any]], history: dict[str, Any], issue_date: d
         item, reason = prepare(record, issue_date, config)
         if item is None: excluded.append({"title": record.get("title", ""), "reason": reason})
         else: eligible.append(item)
-    preprints = _rank([x for x in eligible if x.get("is_preprint")])[:int(config.get("preprint_max", 5))]
+    preprints = _rank([x for x in eligible if x.get("is_preprint") or x.get("document_type") == "preprint"])[:int(config.get("preprint_max", 5))]
     reviews = _rank([x for x in eligible if not x.get("is_preprint") and x.get("document_type") == "review"])
     research = _rank([x for x in eligible if not x.get("is_preprint") and x.get("document_type") == "article"])
     review_min, review_max = int(config.get("review_min", 2)), int(config.get("review_max", 3))
@@ -104,10 +108,15 @@ def select(records: list[dict[str, Any]], history: dict[str, Any], issue_date: d
             chosen_reviews.append(incoming)
             current_hist += 1
     formal = _rank(chosen + chosen_reviews)[:max_total]
+    if any(x.get("is_preprint") or x.get("document_type") == "preprint" for x in formal):
+        raise RadarError("Formal selection contains a preprint")
     hist_count = sum(x["age_pool"] == "historical" for x in formal)
     if len(formal) < min_total: raise RadarError(f"Formal quota unmet: found {len(formal)}, need {min_total}")
     if hist_count < hist_min: raise RadarError(f"Historical quota unmet: found {hist_count}, need {hist_min}")
     if hist_count > hist_max: raise RadarError(f"Historical quota exceeded: found {hist_count}, maximum {hist_max}")
+    top_count = sum(bool(x.get("top_journal")) for x in formal)
+    top_min = int(config.get("top_journal_min", 1))
+    if top_count < top_min: raise RadarError(f"Top journal quota unmet: found {top_count}, need {top_min}")
     return {"issue_date": issue_date.isoformat(), "selected_formal": formal, "selected_research": [x for x in formal if x.get("document_type") == "article"], "selected_reviews": [x for x in formal if x.get("document_type") == "review"], "preprint_watchlist": preprints, "excluded": excluded}
 
 

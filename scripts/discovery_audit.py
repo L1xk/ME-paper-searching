@@ -7,7 +7,7 @@ from datetime import date
 from pathlib import Path
 
 from me_protein_radar.config import RadarConfig
-from me_protein_radar.discovery import discover
+from me_protein_radar.discovery import discover, review_candidate_hint
 
 
 def main() -> int:
@@ -31,7 +31,7 @@ def main() -> int:
         "preprint": sum(bool(item.get("is_preprint")) for item in candidates),
         "top_journal_candidates": sum(bool(item.get("top_journal_candidate")) for item in candidates),
         "targeted_journal_hits": sum(bool(item.get("targeted_journal_hit")) for item in candidates),
-        "review_candidates": sum("reviews" in item.get("query_families", []) or "review" in str(item.get("document_type_hint", "")) for item in candidates),
+        "review_candidates": sum(review_candidate_hint(item) for item in candidates),
         "sources": dict(source_counts),
         "journal_distribution": dict(journal_counts.most_common(20)),
         "top_journal_distribution": dict(top_journal_counts.most_common(20)),

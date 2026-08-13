@@ -47,6 +47,24 @@
       "group_size": 6,
       "crossref_max_journals": 14
     },
+    "review_search": {
+      "enabled": true,
+      "rows_per_query": 40,
+      "topics": [
+        {
+          "name": "microbial_metabolic_engineering",
+          "query": "(microbial metabolic engineering OR microbial synthetic biology OR pathway engineering OR microbial cell factory)"
+        },
+        {
+          "name": "enzyme_engineering_biocatalysis",
+          "query": "(enzyme engineering OR protein engineering OR directed evolution OR biocatalysis OR enzyme immobilization)"
+        },
+        {
+          "name": "ai_protein_design",
+          "query": "((machine learning OR deep learning OR artificial intelligence OR protein language model) AND (enzyme OR protein design OR protein engineering))"
+        }
+      ]
+    },
     "query_families": [
       {
         "name": "microbial_metabolic_engineering",
@@ -63,10 +81,6 @@
       {
         "name": "new_pathway_prediction",
         "query": "(pathway prediction OR retrosynthesis OR de novo pathway) AND (microbial OR yeast OR bacteria) AND biosynthesis"
-      },
-      {
-        "name": "reviews",
-        "query": "review AND ((microbial metabolic engineering AND enzyme engineering) OR (AI AND protein design) OR (machine learning AND enzyme engineering))"
       }
     ]
   },

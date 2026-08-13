@@ -56,7 +56,7 @@ def render(selection: dict[str, Any], warnings: list[str] | None = None) -> str:
     stats = selection.get("candidate_stats") or {}
     stats_html = ""
     if stats:
-        stats_html = f'<div style="margin-top:8px">候选池：正式 {int(stats.get("formal", 0))} · Top 期刊 {int(stats.get("top_journal", 0))} · 期刊定向命中 {int(stats.get("targeted_journal_hits", 0))} · 预印本推送已关闭</div>'
+        stats_html = f'<div style="margin-top:8px">候选池：正式 {int(stats.get("formal", 0))} · Top 期刊 {int(stats.get("top_journal", 0))} · 综述候选 {int(stats.get("review_candidates", 0))} · 期刊定向命中 {int(stats.get("targeted_journal_hits", 0))} · 预印本推送已关闭</div>'
     model_stats = selection.get("model_stats") or {}
     if model_stats:
         stats_html += f'<div style="margin-top:4px">两阶段模型：语义筛选 {int(model_stats.get("screened", 0))} · 通过 {int(model_stats.get("eligible_after_screening", 0))} · 最终中文摘要 {int(model_stats.get("summarized", 0))}</div>'

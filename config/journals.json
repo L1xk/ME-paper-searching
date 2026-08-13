@@ -30,6 +30,11 @@
     {"name": "Trends in Biotechnology", "aliases": ["Trends Biotechnol"], "policy": "review_top", "group": "review", "direct_search": true},
     {"name": "Nature Reviews Chemistry", "aliases": ["Nat Rev Chem"], "policy": "review_top", "group": "review", "direct_search": true},
     {"name": "Nature Reviews Microbiology", "aliases": ["Nat Rev Microbiol"], "policy": "review_top", "group": "review", "direct_search": true},
+    {"name": "Nature Reviews Bioengineering", "aliases": ["Nat Rev Bioeng"], "policy": "review_top", "group": "review", "direct_search": true},
+    {"name": "Chemical Society Reviews", "aliases": ["Chem Soc Rev"], "policy": "review_top", "group": "review", "direct_search": true, "crossref_direct": true},
+    {"name": "Trends in Chemistry", "aliases": ["Trends Chem"], "policy": "review_top", "group": "review", "direct_search": true},
+    {"name": "Annual Review of Biochemistry", "aliases": ["Annu Rev Biochem"], "policy": "review_top", "group": "review", "direct_search": true},
+    {"name": "Current Opinion in Biotechnology", "aliases": ["Curr Opin Biotechnol"], "policy": "review_top", "group": "review", "direct_search": true},
     {"name": "Biotechnology Advances", "aliases": ["Biotechnol Adv"], "policy": "review_top", "group": "review", "direct_search": true, "crossref_direct": true}
   ]
 }

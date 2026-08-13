@@ -80,6 +80,7 @@ def screen_system_prompt() -> str:
 3. 酶工程需包含酶/生物催化对象及设计、改造、定向进化、筛选、固定化或性能评价。
 4. AI for Protein 需同时有蛋白对象、AI 方法、明确蛋白任务；原创研究必须有湿实验验证。通用结构预测/蛋白设计只有满足这些条件才纳入。
 5. 综述可纳入科研视角，不要求湿实验，但必须高度相关。原创 AI for Protein 的优先级低于代谢工程及二者结合。
+5a. PubMed/Europe PMC 给出的 review 文献类型提示属于强元数据；只有摘要明确显示为原创研究时才可改判。review_search_hit 仅表示经综述专用检索召回，不能单独证明文献类型。
 6. 摘要级证据只能总结摘要明确陈述的内容。
 7. 普通期刊的原创研究只有在证据明确支持下列突破之一时才能标记 exceptional_novelty=true：首次完整新通路、首次新产物路线、带明确数值的领域领先性能、经湿实验验证且可迁移的 AI 蛋白方法、或可推广的酶工程平台。常规菌株优化、单酶活性提升、仅称“novel/first”但无实质证据、一般性模型应用均必须为 false。综述不得标记为创新例外。
 输出严格 JSON 对象，不要 Markdown。此阶段只做准入、证据和评分，不生成题目翻译或长摘要。中文证据字段应精炼、具体、避免宣传口吻。"""
@@ -92,6 +93,8 @@ def screen_user_prompt(record: dict[str, Any]) -> str:
         "journal": record.get("journal"),
         "date": record.get("publication_date"),
         "document_type_hint": record.get("document_type_hint"),
+        "review_search_hit": bool(record.get("review_search_hit")),
+        "query_families": record.get("query_families") or [],
         "is_preprint": record.get("is_preprint"),
         "verification_level": record.get("verification_level"),
         "evidence": evidence,

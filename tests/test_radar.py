@@ -10,7 +10,7 @@ from unittest.mock import patch
 
 from me_protein_radar.config import RadarConfig
 from me_protein_radar.deepseek import BudgetLedger, DeepSeekClient, screen_all, summarize_selected
-from me_protein_radar.discovery import build_targeted_search_specs, crossref_search, hard_exclusion_reason, inverted_abstract, merge_candidates, normalize_record
+from me_protein_radar.discovery import build_review_search_specs, build_targeted_search_specs, crossref_search, hard_exclusion_reason, inverted_abstract, merge_candidates, normalize_record
 from me_protein_radar.io_utils import RadarError, assess_journal, is_top_journal
 from me_protein_radar.render import render, subject
 from me_protein_radar.pipeline import run
@@ -74,6 +74,23 @@ class DiscoveryTests(unittest.TestCase):
         self.assertFalse(assess_journal("Trends Biotechnol", config.journals, document_type="article")["top_journal"])
         self.assertTrue(assess_journal("Trends Biotechnol", config.journals, document_type="review")["top_journal"])
         self.assertEqual(hard_exclusion_reason({"title": "Metal nanozyme for tumor therapy"}), "nanozyme")
+
+    def test_review_queries_use_source_native_type_filters(self):
+        config = RadarConfig.from_path(ROOT / "config" / "radar.json")
+        pubmed_specs = build_review_search_specs("pubmed", config)
+        epmc_specs = build_review_search_specs("europe_pmc", config)
+        crossref_specs = build_review_search_specs("crossref", config)
+        self.assertGreaterEqual(len(pubmed_specs), 3)
+        self.assertTrue(all("Review[Publication Type]" in item["query"] for item in pubmed_specs))
+        self.assertTrue(all("PUB_TYPE:review" in item["query"] for item in epmc_specs))
+        self.assertTrue(all(item["review_search"] for item in crossref_specs))
+
+    def test_review_search_provenance_survives_deduplication(self):
+        first = normalize_record({"title": "Review of microbial metabolic engineering", "doi": "10.1/review", "abstract": "Microbial pathway and enzyme engineering."}, "Crossref")
+        second = dict(first, source_labels=["PubMed"], query_families=["review_focus_metabolic"], review_search_hit=True)
+        merged = merge_candidates([first, second])
+        self.assertTrue(merged[0]["review_search_hit"])
+        self.assertIn("review_focus_metabolic", merged[0]["query_families"])
 
     def test_fulltext_then_abstract_fallback(self):
         xml = b"<article><body><sec><title>Results</title><p>" + b"validated enzyme activity " * 40 + b"</p></sec></body></article>"

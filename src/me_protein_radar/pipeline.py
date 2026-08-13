@@ -12,7 +12,7 @@ from zoneinfo import ZoneInfo
 
 from .config import RadarConfig
 from .deepseek import BudgetLedger, DeepSeekClient, screen_all, summarize_selected
-from .discovery import discover
+from .discovery import discover, review_candidate_hint
 from .io_utils import RadarError, assess_journal, load_json, write_json_atomic
 from .mailer import send_alert, send_html
 from .render import render, subject
@@ -47,6 +47,7 @@ def run(args: argparse.Namespace) -> dict[str, Any]:
         "preprint": sum(bool(x.get("is_preprint")) for x in candidates),
         "top_journal": sum(candidate_top),
         "targeted_journal_hits": sum(bool(x.get("targeted_journal_hit")) for x in candidates),
+        "review_candidates": sum(review_candidate_hint(x) for x in candidates),
         "sources": source_counts,
     }
     verified = verify_all(candidates, timeout=int(config.discovery.get("request_timeout_seconds", 30)))
@@ -54,7 +55,17 @@ def run(args: argparse.Namespace) -> dict[str, Any]:
     ledger = BudgetLedger(args.usage, float(config.get("monthly_budget_cny")), float(ds.get("input_cny_per_million", 1)), float(ds.get("output_cny_per_million", 2)), issue_date)
     client = DeepSeekClient(config, ledger)
     screened, rejected = screen_all(verified, client, config.journals)
-    selection = select(screened, history, issue_date, config)
+    try:
+        selection = select(screened, history, issue_date, config)
+    except RadarError as exc:
+        screened_reviews = sum(item.get("document_type") == "review" for item in screened)
+        screened_top = sum(bool(item.get("top_journal")) for item in screened)
+        raise RadarError(
+            f"{exc}; diagnostics: candidates={len(candidates)}, "
+            f"review_candidates={candidate_stats['review_candidates']}, "
+            f"screened_eligible={len(screened)}, screened_reviews={screened_reviews}, "
+            f"screened_top={screened_top}"
+        ) from exc
     summarized = summarize_selected(selection, client)
     selection["excluded"] = rejected + selection["excluded"]
     selection["rejection_summary"] = dict(Counter(item.get("reason", "unknown") for item in selection["excluded"]).most_common(10))

@@ -135,6 +135,7 @@ def merge_candidates(records: Iterable[Record]) -> list[Record]:
         match["source_labels"] = source_labels
         match["query_families"] = query_families
         match["targeted_journal_hit"] = bool(match.get("targeted_journal_hit")) or bool(raw.get("targeted_journal_hit"))
+        match["review_search_hit"] = bool(match.get("review_search_hit")) or bool(raw.get("review_search_hit"))
         for field in ("abstract", "doi", "url", "journal", "publication_date", "pmid", "pmcid", "document_type_hint", "authors"):
             if not match.get(field) and raw.get(field):
                 match[field] = raw[field]
@@ -156,6 +157,10 @@ def cheap_relevance(record: Record) -> float:
 def hard_exclusion_reason(record: Record) -> str:
     title = clean_text(record.get("title")).casefold()
     return next((phrase for phrase in HARD_EXCLUDE_TITLE_PHRASES if phrase in title), "")
+
+
+def review_candidate_hint(record: Record) -> bool:
+    return bool(record.get("review_search_hit")) or "review" in clean_text(record.get("document_type_hint")).casefold()
 
 
 def crossref_search(query: str, from_date: date, until_date: date, rows: int, mailto: str, timeout: int, fetch: Fetcher = request_json, journal: str = "") -> list[Record]:
@@ -309,6 +314,33 @@ def build_targeted_search_specs(source: str, config: RadarConfig) -> list[dict[s
     return specs
 
 
+def build_review_search_specs(source: str, config: RadarConfig) -> list[dict[str, Any]]:
+    """Build source-native review queries instead of relying on the word 'review'."""
+    settings = config.discovery.get("review_search") or {}
+    if not settings.get("enabled", False):
+        return []
+    specs: list[dict[str, Any]] = []
+    for item in settings.get("topics", []):
+        name = clean_text(item.get("name") or "topic")
+        topic = clean_text(item.get("query"))
+        if not topic:
+            continue
+        if source == "pubmed":
+            query = f"({topic}) AND Review[Publication Type]"
+        elif source == "europe_pmc":
+            query = f"({topic}) AND PUB_TYPE:review"
+        else:
+            query = f"({topic}) AND review"
+        specs.append({
+            "name": f"review_focus_{name}",
+            "query": query,
+            "journal": "",
+            "targeted": False,
+            "review_search": True,
+        })
+    return specs
+
+
 def discover(config: RadarConfig, issue_date: date, mailto: str) -> tuple[list[Record], list[str]]:
     settings = config.discovery
     rows = int(settings.get("rows_per_query", 20))
@@ -321,12 +353,13 @@ def discover(config: RadarConfig, issue_date: date, mailto: str) -> tuple[list[R
     targeted = settings.get("targeted_journal_search") or {}
     targeted_rows_group = int(targeted.get("rows_per_group", rows))
     targeted_rows_journal = int(targeted.get("rows_per_journal", min(rows, 15)))
+    review_rows = int((settings.get("review_search") or {}).get("rows_per_query", rows))
     adapters = {
-        "crossref": lambda q, journal="", targeted_run=False: crossref_search(q, lower, issue_date, targeted_rows_journal if targeted_run else rows, mailto, timeout, journal=journal),
-        "pubmed": lambda q, journal="", targeted_run=False: pubmed_search(q, lower, issue_date, targeted_rows_group if targeted_run else rows, mailto, timeout),
-        "europe_pmc": lambda q, journal="", targeted_run=False: europe_pmc_search(q, lower, issue_date, targeted_rows_group if targeted_run else rows, timeout),
-        "openalex": lambda q, journal="", targeted_run=False: openalex_search(q, lower, issue_date, rows, mailto, timeout, openalex_key),
-        "arxiv": lambda q, journal="", targeted_run=False: arxiv_search(q, lower, issue_date, rows, timeout),
+        "crossref": lambda q, journal="", targeted_run=False, review_run=False: crossref_search(q, lower, issue_date, review_rows if review_run else (targeted_rows_journal if targeted_run else rows), mailto, timeout, journal=journal),
+        "pubmed": lambda q, journal="", targeted_run=False, review_run=False: pubmed_search(q, lower, issue_date, review_rows if review_run else (targeted_rows_group if targeted_run else rows), mailto, timeout),
+        "europe_pmc": lambda q, journal="", targeted_run=False, review_run=False: europe_pmc_search(q, lower, issue_date, review_rows if review_run else (targeted_rows_group if targeted_run else rows), timeout),
+        "openalex": lambda q, journal="", targeted_run=False, review_run=False: openalex_search(q, lower, issue_date, review_rows if review_run else rows, mailto, timeout, openalex_key),
+        "arxiv": lambda q, journal="", targeted_run=False, review_run=False: arxiv_search(q, lower, issue_date, rows, timeout),
     }
     if "openalex" in sources and not openalex_key:
         warnings.append("openalex: OPENALEX_API_KEY 未配置，已跳过该来源")
@@ -336,16 +369,19 @@ def discover(config: RadarConfig, issue_date: date, mailto: str) -> tuple[list[R
         source_warnings: list[str] = []
         adapter = adapters[name]
         specs = [
-            {"name": str(family.get("name", "query")), "query": str(family.get("query", "")), "journal": "", "targeted": False}
+            {"name": str(family.get("name", "query")), "query": str(family.get("query", "")), "journal": "", "targeted": False, "review_search": False}
             for family in settings.get("query_families", [])
+            if str(family.get("name", "")) != "reviews"
         ]
-        specs += [{**spec, "targeted": True} for spec in build_targeted_search_specs(name, config)]
+        specs += [{**spec, "targeted": True, "review_search": False} for spec in build_targeted_search_specs(name, config)]
+        specs += build_review_search_specs(name, config)
         for spec in specs:
             try:
-                found = adapter(spec["query"], spec.get("journal", ""), bool(spec.get("targeted")))
+                found = adapter(spec["query"], spec.get("journal", ""), bool(spec.get("targeted")), bool(spec.get("review_search")))
                 for record in found:
                     record["query_families"] = [str(spec["name"])]
                     record["targeted_journal_hit"] = bool(spec.get("targeted"))
+                    record["review_search_hit"] = bool(spec.get("review_search"))
                 source_records.extend(found)
             except Exception as exc:
                 source_warnings.append(f"{name}/{spec['name']}: {type(exc).__name__}: {exc}")
@@ -376,7 +412,7 @@ def discover(config: RadarConfig, issue_date: date, mailto: str) -> tuple[list[R
         and cheap_relevance(item) >= (10 if item.get("targeted_journal_hit") else 16)
     ]
     for item in candidates:
-        type_hint = "review" if "reviews" in item.get("query_families", []) else item.get("document_type_hint", "")
+        type_hint = "review" if review_candidate_hint(item) else item.get("document_type_hint", "")
         journal = assess_journal(item.get("journal"), config.journals, item.get("title"), item.get("abstract"), type_hint)
         item.update({
             "canonical_journal": journal["canonical_name"],
@@ -394,7 +430,7 @@ def discover(config: RadarConfig, issue_date: date, mailto: str) -> tuple[list[R
     reserved_preprints = preprint_candidates[:preprint_limit]
     formal_limit = max(0, limit - len(reserved_preprints))
     top_formal = [x for x in formal_candidates if x.get("top_journal_candidate")]
-    reviews = [x for x in formal_candidates if "review" in x.get("query_families", []) or "review" in str(x.get("document_type_hint", ""))]
+    reviews = [x for x in formal_candidates if review_candidate_hint(x)]
     recent = [x for x in formal_candidates if (parse_date(x.get("publication_date")) or lower) >= recent_cutoff and x not in reviews]
     historical = [x for x in formal_candidates if x not in reviews and x not in recent]
     reserved: list[Record] = []

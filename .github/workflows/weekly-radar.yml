@@ -2,8 +2,8 @@ name: ME Protein Weekly Radar
 
 on:
   schedule:
-    # Beijing is UTC+8 year-round: Monday 10:28 Beijing = Monday 02:28 UTC.
-    - cron: "28 2 * * 1"
+    # Beijing is UTC+8 year-round: Monday 10:46 Beijing = Monday 02:46 UTC.
+    - cron: "46 2 * * 1"
   workflow_dispatch:
     inputs:
       mode:

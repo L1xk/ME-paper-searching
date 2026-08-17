@@ -60,4 +60,4 @@ If Python 3.11 is unavailable locally, Python 3.9 is sufficient for the current 
 - `src/me_protein_radar/render.py`: static responsive HTML.
 - `src/me_protein_radar/pipeline.py`: orchestration, delivery, and failure alert.
 - `scripts/discovery_audit.py`: read-only retrieval diagnostic without DeepSeek, SMTP, or history mutation.
-- `.github/workflows/weekly-radar.yml`: Monday 10:28 Beijing unattended schedule.
+- `.github/workflows/weekly-radar.yml`: Monday 10:46 Beijing unattended schedule.

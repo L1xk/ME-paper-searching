@@ -1,6 +1,6 @@
 # ME × Protein 文献雷达
 
-这是一个可在 GitHub Actions 上无人值守运行的文献筛选与 QQ 邮件推送项目。它面向微生物代谢工程、酶工程和带湿实验验证的 AI for Protein 研究；每周一北京时间 10:28 运行，不要求电脑开机、保持 Codex 打开或持续登录 QQ 邮箱网页。
+这是一个可在 GitHub Actions 上无人值守运行的文献筛选与 QQ 邮件推送项目。它面向微生物代谢工程、酶工程和带湿实验验证的 AI for Protein 研究；每周一北京时间 10:46 运行，不要求电脑开机、保持 Codex 打开或持续登录 QQ 邮箱网页。
 
 > 安全说明：公开仓库只包含代码、配置模板和状态数据。真实邮箱、SMTP 授权码与 API Key 必须保存在 GitHub Actions Secrets 中。Fork 不会继承上游仓库的 Secrets。
 
@@ -54,13 +54,13 @@ QQ 邮箱网页不需要持续登录，但必须保持 SMTP 服务启用、授�
 2. 添加上述 GitHub Secrets，并在仓库 Actions 设置中允许工作流具有读写权限。
 3. 打开 `Actions → ME Protein Weekly Radar → Run workflow`，先选 `test`。
 4. 确认收到带 `[TEST]` 前缀的邮件、排版和内容正常；测试不会写入 `data/history.json`。
-5. 再手动选择 `production` 验证一次。此后计划任务会在每周一北京时间 10:28 自动运行。
+5. 再手动选择 `production` 验证一次。此后计划任务会在每周一北京时间 10:46 自动运行。
 
 GitHub 的计划任务可能因平台排队而延迟几分钟，并非本地时区错误。
 
 ## 长期无人值守
 
-- 主工作流由 `.github/workflows/weekly-radar.yml` 在每周一北京时间 10:28 调度，计划任务始终读取默认分支的最新工作流文件。
+- 主工作流由 `.github/workflows/weekly-radar.yml` 在每周一北京时间 10:46 调度，计划任务始终读取默认分支的最新工作流文件。
 - 公开仓库若连续 60 天没有仓库活动，GitHub 可能自动停用定时工作流。`.github/workflows/keepalive.yml` 每月只更新一次 `data/keepalive.txt`，不检索论文、不调用 DeepSeek、不发送邮件，用于维持仓库活动。
 - 每周生产运行成功后会提交 `data/history.json` 与 `data/usage.json`；测试模式不会写推荐历史。
 - 如果 GitHub Actions、仓库写权限、QQ SMTP、DeepSeek Key 或其他外部服务失效，任务仍可能中断；失败时会发送告警邮件，并且不会写入推荐历史。

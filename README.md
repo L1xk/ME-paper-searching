@@ -1,6 +1,6 @@
 # ME × Protein 文献雷达
 
-这是一个可在 GitHub Actions 上无人值守运行的文献筛选与 QQ 邮件推送项目。它面向微生物代谢工程、酶工程和带湿实验验证的 AI for Protein 研究；每周一北京时间 10:46 运行，不要求电脑开机、保持 Codex 打开或持续登录 QQ 邮箱网页。
+这是一个可在 GitHub Actions 上无人值守运行的文献筛选与 QQ 邮件推送项目。它面向微生物代谢工程、酶工程和带湿实验验证的 AI for Protein 研究；每周最多正式投递一期，GitHub 每天北京时间 10:46 检查并在本周尚未成功时自动重试，不要求电脑开机、保持 Codex 打开或持续登录 QQ 邮箱网页。
 
 > 安全说明：公开仓库只包含代码、配置模板和状态数据。真实邮箱、SMTP 授权码与 API Key 必须保存在 GitHub Actions Secrets 中。Fork 不会继承上游仓库的 Secrets。
 
@@ -54,15 +54,17 @@ QQ 邮箱网页不需要持续登录，但必须保持 SMTP 服务启用、授�
 2. 添加上述 GitHub Secrets，并在仓库 Actions 设置中允许工作流具有读写权限。
 3. 打开 `Actions → ME Protein Weekly Radar → Run workflow`，先选 `test`。
 4. 确认收到带 `[TEST]` 前缀的邮件、排版和内容正常；测试不会写入 `data/history.json`。
-5. 再手动选择 `production` 验证一次。此后计划任务会在每周一北京时间 10:46 自动运行。
+5. 再手动选择 `production` 验证一次。成功后会写入本周投递锁；此后每天北京时间 10:46 自动检查，本周已投递时立即零成本退出，未投递时执行或重试正式周报。
 
-GitHub 的计划任务可能因平台排队而延迟几分钟，并非本地时区错误。
+GitHub 的计划任务是尽力调度，可能因平台负载延迟较长时间，极端情况下也可能丢弃单次任务。每日检查提供下一天的自动补偿机会，但不保证精确到分钟。
 
 ## 长期无人值守
 
-- 主工作流由 `.github/workflows/weekly-radar.yml` 在每周一北京时间 10:46 调度，计划任务始终读取默认分支的最新工作流文件。
+- 主工作流由 `.github/workflows/weekly-radar.yml` 每天北京时间 10:46 调度，计划任务始终读取默认分支的最新工作流文件。
+- `data/delivery_state.json` 使用北京时间日期对应的 ISO 周作为幂等键。一次 production 邮件成功后才写入 `sent`；同周后续计划或手动 production 会在检索、DeepSeek 和 SMTP 之前退出，因此不会重复投递或产生模型费用。若旧版工作流只成功写入了同周 `data/history.json`，程序会自动恢复投递锁。新一周自动获得新的投递机会。
+- `data/automation_status.json` 记录最近检查结果与最近一次正式成功，供 GitHub 仓库直接查看运行健康；计划任务完全没有被 GitHub 创建时，该文件不会变化。
 - 公开仓库若连续 60 天没有仓库活动，GitHub 可能自动停用定时工作流。`.github/workflows/keepalive.yml` 每月只更新一次 `data/keepalive.txt`，不检索论文、不调用 DeepSeek、不发送邮件，用于维持仓库活动。
-- 每周生产运行成功后会提交 `data/history.json` 与 `data/usage.json`；测试模式不会写推荐历史。
+- 每次云端检查都从执行时最新默认分支读取状态，并提交必要的预算、健康和投递状态；正式发送成功后同时提交 `data/history.json` 与 `data/delivery_state.json`。状态推送遇到远端更新时会拉取、rebase 并最多重试 3 次。测试模式不会写推荐历史或正式投递锁。
 - 如果 GitHub Actions、仓库写权限、QQ SMTP、DeepSeek Key 或其他外部服务失效，任务仍可能中断；失败时会发送告警邮件，并且不会写入推荐历史。
 - 建议每季度检查一次 Actions 最近运行、DeepSeek 余额与 QQ SMTP 授权码；公开仓库的标准 GitHub-hosted runner 通常不计 Actions 分钟费用，但 DeepSeek API 和邮件服务仍受各自额度与政策约束。
 
@@ -70,7 +72,7 @@ GitHub 的计划任务可能因平台排队而延迟几分钟，并非本地时�
 
 - 仓库公开后，源码、提交历史、Actions 运行日志和状态文件会对所有人可见；Secrets 的值不会随仓库公开，也不会传给普通 Fork。
 - 不要在 Issue、日志、截图、示例文件或错误信息中粘贴真实密钥。发现泄露时先撤销或轮换密钥，再清理日志或历史。
-- `data/history.json` 会保存已推荐论文的公开题录标识，用于去重；`data/usage.json` 只保存模型调用量与估算费用，不保存密钥。
+- `data/history.json` 会保存已推荐论文的公开题录标识，用于去重；`data/usage.json` 只保存模型调用量与估算费用；`data/delivery_state.json` 和 `data/automation_status.json` 只保存周期、时间、计数和公开运行标识，均不保存密钥。
 - 安全问题请使用 GitHub Security Advisory 私下报告，详见 `SECURITY.md`。
 
 ## 费用保护

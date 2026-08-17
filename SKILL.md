@@ -32,6 +32,7 @@ Use this Skill to maintain the self-contained GitHub-ready pipeline in this dire
 12. Generate Chinese summaries for all selected papers in static, no-JavaScript email HTML and expose targeted-retrieval, two-stage-model, candidate-pool, and diversity diagnostics in the footer.
 13. Enforce the configured monthly CNY budget by reserving worst-case cost before each model attempt and settling with reported token usage. Stop and alert before exceeding the limit.
 14. For public unattended deployments, keep credentials exclusively in GitHub Actions Secrets, document that forks receive no upstream secrets, and preserve monthly repository activity so GitHub does not disable scheduled workflows after prolonged inactivity.
+15. Trigger a retry check every day at the configured non-round minute, but deliver at most once per Beijing-local ISO week. Checkout the latest default branch and check the committed delivery lock before discovery, model calls, and SMTP; recover a missing lock from same-week recommendation history, and exit with zero model cost when the week was already delivered. Mark the week sent only after successful SMTP delivery, commit a public last-check/last-success health record, and retry state pushes after rebasing on the latest default branch.
 
 ## Interactive literature support
 
@@ -47,7 +48,7 @@ py -3.11 -m unittest discover -s tests -v
 py -3.11 -m compileall -q src scripts tests
 ```
 
-If Python 3.11 is unavailable locally, Python 3.9 is sufficient for the current offline test suite, while GitHub Actions remains pinned to Python 3.11. Also inspect `.github/workflows/weekly-radar.yml`, scan generated project files for hard-coded secrets, and confirm test mode does not mutate `data/history.json`.
+If Python 3.11 is unavailable locally, Python 3.9 is sufficient for the current offline test suite, while GitHub Actions remains pinned to Python 3.11. Also inspect `.github/workflows/weekly-radar.yml`, scan generated project files for hard-coded secrets, confirm test mode does not mutate `data/history.json` or `data/delivery_state.json`, and confirm a repeated production run exits before discovery and model construction.
 
 ## Main files
 
@@ -57,7 +58,9 @@ If Python 3.11 is unavailable locally, Python 3.9 is sufficient for the current 
 - `src/me_protein_radar/verification.py`: open-full-text/abstract degradation policy.
 - `src/me_protein_radar/deepseek.py`: structured model call and budget ledger.
 - `src/me_protein_radar/selection.py`: scoring, quotas, deduplication, and history transaction.
+- `src/me_protein_radar/delivery.py`: ISO-week delivery lock and public automation health state.
 - `src/me_protein_radar/render.py`: static responsive HTML.
 - `src/me_protein_radar/pipeline.py`: orchestration, delivery, and failure alert.
 - `scripts/discovery_audit.py`: read-only retrieval diagnostic without DeepSeek, SMTP, or history mutation.
-- `.github/workflows/weekly-radar.yml`: Monday 10:46 Beijing unattended schedule.
+- `scripts/workflow_status.py`: public failure heartbeat when setup or offline validation fails before the main pipeline can record status.
+- `.github/workflows/weekly-radar.yml`: daily 10:46 Beijing retry check with one successful delivery per ISO week.

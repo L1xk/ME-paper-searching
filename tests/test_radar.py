@@ -11,6 +11,7 @@ from unittest.mock import patch
 
 from me_protein_radar.config import RadarConfig
 from me_protein_radar.deepseek import BudgetLedger, DeepSeekClient, screen_all, summarize_selected
+from me_protein_radar.delivery import delivery_period, history_delivery_records, load_delivery_state, mark_delivered, update_automation_status, was_delivered
 from me_protein_radar.discovery import build_review_search_specs, build_targeted_search_specs, crossref_search, hard_exclusion_reason, inverted_abstract, merge_candidates, normalize_record
 from me_protein_radar.io_utils import RadarError, assess_journal, is_top_journal
 from me_protein_radar.http import request_bytes
@@ -292,19 +293,98 @@ class PipelineTests(unittest.TestCase):
             base = Path(temp)
             history = base / "history.json"
             history.write_text('{"version":1,"recommended":{}}', encoding="utf-8")
-            args = Namespace(config=ROOT / "config" / "radar.json", history=history, usage=base / "usage.json", output=base / "output", issue_date="2026-08-17", mode="production", dry_run=False, candidates=None)
+            delivery_state = base / "delivery_state.json"
+            automation_status = base / "automation_status.json"
+            args = Namespace(config=ROOT / "config" / "radar.json", history=history, usage=base / "usage.json", delivery_state=delivery_state, automation_status=automation_status, output=base / "output", issue_date="2026-08-17", mode="production", dry_run=False, candidates=None)
             with patch("me_protein_radar.pipeline.discover", return_value=(papers, [])), patch("me_protein_radar.pipeline.verify_all", side_effect=lambda rows, timeout: rows), patch("me_protein_radar.pipeline.DeepSeekClient", return_value=object()), patch("me_protein_radar.pipeline.screen_all", return_value=(papers, [])), patch("me_protein_radar.pipeline.summarize_selected", side_effect=lambda selection, client: len(selection["selected_formal"])), patch("me_protein_radar.pipeline.send_html") as sender:
                 result = run(args)
             self.assertTrue(result["history_committed"])
             self.assertTrue(sender.called)
             self.assertGreaterEqual(len(json.loads(history.read_text(encoding="utf-8"))["recommended"]), 10)
+            state_after_send = json.loads(delivery_state.read_text(encoding="utf-8"))
+            self.assertTrue(was_delivered(state_after_send, "2026-W34"))
+            status_after_send = json.loads(automation_status.read_text(encoding="utf-8"))
+            self.assertEqual(status_after_send["last_success"]["outcome"], "sent")
+
+            delivery_state.unlink()
+            with patch("me_protein_radar.pipeline.discover", side_effect=AssertionError("paid pipeline must not run twice")), patch("me_protein_radar.pipeline.send_html") as duplicate_sender:
+                duplicate = run(args)
+            self.assertTrue(duplicate["skipped"])
+            self.assertEqual(duplicate["budget_cny"], 0.0)
+            duplicate_sender.assert_not_called()
+            recovered_state = json.loads(delivery_state.read_text(encoding="utf-8"))
+            self.assertEqual(recovered_state["deliveries"]["2026-W34"]["source"], "history_recovery")
 
             history.write_text('{"version":1,"recommended":{}}', encoding="utf-8")
             args.mode = "test"
+            state_before_test = delivery_state.read_text(encoding="utf-8")
             with patch("me_protein_radar.pipeline.discover", return_value=(papers, [])), patch("me_protein_radar.pipeline.verify_all", side_effect=lambda rows, timeout: rows), patch("me_protein_radar.pipeline.DeepSeekClient", return_value=object()), patch("me_protein_radar.pipeline.screen_all", return_value=(papers, [])), patch("me_protein_radar.pipeline.summarize_selected", side_effect=lambda selection, client: len(selection["selected_formal"])), patch("me_protein_radar.pipeline.send_html"):
                 result = run(args)
             self.assertFalse(result["history_committed"])
             self.assertEqual(json.loads(history.read_text(encoding="utf-8"))["recommended"], {})
+            self.assertEqual(delivery_state.read_text(encoding="utf-8"), state_before_test)
+
+
+class DeliveryStateTests(unittest.TestCase):
+    def test_iso_week_key_and_round_trip(self):
+        self.assertEqual(delivery_period(date(2026, 8, 17)), "2026-W34")
+        self.assertEqual(delivery_period(date(2026, 8, 23)), "2026-W34")
+        self.assertEqual(delivery_period(date(2026, 8, 24)), "2026-W35")
+        with tempfile.TemporaryDirectory() as temp:
+            path = Path(temp) / "delivery.json"
+            state = load_delivery_state(path)
+            self.assertFalse(was_delivered(state, "2026-W34"))
+            state = mark_delivered(
+                state,
+                "2026-W34",
+                issue_date="2026-08-17",
+                sent_at="2026-08-17T11:00:00+08:00",
+                formal_count=12,
+                review_count=2,
+                subject="ME × Protein 周报",
+            )
+            self.assertTrue(was_delivered(state, "2026-W34"))
+            self.assertFalse(was_delivered(state, "2026-W35"))
+
+    def test_noop_health_check_preserves_last_success(self):
+        with tempfile.TemporaryDirectory() as temp:
+            path = Path(temp) / "automation.json"
+            update_automation_status(
+                path,
+                checked_at="2026-08-17T11:00:00+08:00",
+                issue_date="2026-08-17",
+                period="2026-W34",
+                mode="production",
+                outcome="sent",
+                trigger="schedule",
+                run_id="100",
+            )
+            update_automation_status(
+                path,
+                checked_at="2026-08-18T10:46:00+08:00",
+                issue_date="2026-08-18",
+                period="2026-W34",
+                mode="production",
+                outcome="already_delivered",
+                trigger="schedule",
+                run_id="101",
+            )
+            status = json.loads(path.read_text(encoding="utf-8"))
+            self.assertEqual(status["last_check"]["outcome"], "already_delivered")
+            self.assertEqual(status["last_success"]["outcome"], "sent")
+            self.assertEqual(status["last_success"]["run_id"], "100")
+
+    def test_history_can_recover_a_missing_week_lock(self):
+        history = {
+            "version": 1,
+            "recommended": {
+                "doi:one": {"issue_date": "2026-08-17", "title": "One"},
+                "doi:old": {"issue_date": "2026-08-10", "title": "Old"},
+                "doi:invalid": {"issue_date": "unknown", "title": "Invalid"},
+            },
+        }
+        records = history_delivery_records(history, "2026-W34")
+        self.assertEqual([item["title"] for item in records], ["One"])
 
 
 if __name__ == "__main__":

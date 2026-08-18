@@ -1,4 +1,14 @@
 {
   "version": 1,
-  "deliveries": {}
+  "deliveries": {
+    "2026-W34": {
+      "status": "sent",
+      "issue_date": "2026-08-18",
+      "sent_at": "2026-08-18T11:34:36.782257+08:00",
+      "formal_count": 10,
+      "review_count": 2,
+      "subject": "ME × Protein 周报 | 2026-08-18 | 精选 10 篇",
+      "source": "smtp"
+    }
+  }
 }

@@ -1,5 +1,65 @@
 {
   "version": 1,
-  "recommended": {}
+  "recommended": {
+    "doi:10.1038/s41467-026-72579-2": {
+      "issue_date": "2026-08-18",
+      "title": "Block-building with yeast to elucidate an artificial pathway for de novo biosynthesis of glabridin.",
+      "first_author": "Deng H",
+      "doi": "10.1038/s41467-026-72579-2"
+    },
+    "doi:10.1016/j.biortech.2026.134665": {
+      "issue_date": "2026-08-18",
+      "title": "De novo biosynthesis of 3'-sialyllactosamine in Escherichia coli via integrated metabolic and protein engineering.",
+      "first_author": "Luo G",
+      "doi": "10.1016/j.biortech.2026.134665"
+    },
+    "doi:10.1016/j.biortech.2026.134466": {
+      "issue_date": "2026-08-18",
+      "title": "Engineering a hybrid chemical-biological system for efficient de novo taurine production via computational enzyme design and pathway engineering.",
+      "first_author": "Li L",
+      "doi": "10.1016/j.biortech.2026.134466"
+    },
+    "doi:10.1002/advs.202517703": {
+      "issue_date": "2026-08-18",
+      "title": "Cross Kingdom Metabolic Engineering Paradigm Elevating Sustainable Protein Production",
+      "first_author": "Yuanyuan Du",
+      "doi": "10.1002/advs.202517703"
+    },
+    "doi:10.1002/anie.202512156": {
+      "issue_date": "2026-08-18",
+      "title": "Metabolic Engineering of the 5‐Aminolevulinate Biosynthetic Pathway in E. coli Improves Efficiency of Hemoprotein‐Based Biocatalysis",
+      "first_author": "Shunsuke Kato",
+      "doi": "10.1002/anie.202512156"
+    },
+    "doi:10.1021/acs.jafc.6c06520": {
+      "issue_date": "2026-08-18",
+      "title": "Integrating Morphology and Transcriptional Regulation to Alleviate Intracellular Product Stress for Enhanced Indigo Biosynthesis in Escherichia coli.",
+      "first_author": "Heng Hu",
+      "doi": "10.1021/acs.jafc.6c06520"
+    },
+    "doi:10.1021/acs.jafc.5c13739": {
+      "issue_date": "2026-08-18",
+      "title": "Engineering Artificial Protein Cages for Metabolic Pathway Regulation by Compartment Reinforcement.",
+      "first_author": "Ding Q",
+      "doi": "10.1021/acs.jafc.5c13739"
+    },
+    "doi:10.1002/advs.202404632": {
+      "issue_date": "2026-08-18",
+      "title": "Unveiling Metabolic Engineering Strategies by Quantitative Heterologous Pathway Design",
+      "first_author": "Fan Wei",
+      "doi": "10.1002/advs.202404632"
+    },
+    "doi:10.1016/j.copbio.2026.103553": {
+      "issue_date": "2026-08-18",
+      "title": "Pathway engineering for sustainable biomanufacturing: integrating AI, systems biology, enzyme engineering, and dynamic control.",
+      "first_author": "Yuki Ogawa",
+      "doi": "10.1016/j.copbio.2026.103553"
+    },
+    "doi:10.1016/j.biotechadv.2026.108995": {
+      "issue_date": "2026-08-18",
+      "title": "Promoter engineering in oleaginous yeasts for value-added chemical production.",
+      "first_author": "Akhmad Awaludin Agustiar",
+      "doi": "10.1016/j.biotechadv.2026.108995"
+    }
+  }
 }
-

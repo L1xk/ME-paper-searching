@@ -1,14 +1,14 @@
 {
   "version": 1,
   "last_check": {
-    "checked_at": "2026-08-23T11:36:26.034831+08:00",
-    "issue_date": "2026-08-23",
-    "period": "2026-W34",
+    "checked_at": "2026-08-24T11:44:15.606175+08:00",
+    "issue_date": "2026-08-24",
+    "period": "2026-W35",
     "mode": "production",
-    "outcome": "already_delivered",
+    "outcome": "failed",
     "trigger": "schedule",
-    "run_id": "32615767254",
-    "lock_source": "delivery_state"
+    "run_id": "32687196757",
+    "error_type": "RadarError"
   },
   "last_success": {
     "checked_at": "2026-08-18T11:34:36.782363+08:00",

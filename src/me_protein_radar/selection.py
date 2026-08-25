@@ -134,7 +134,7 @@ def select(records: list[dict[str, Any]], history: dict[str, Any], issue_date: d
     if len(reviews) < review_min: raise RadarError(f"Review quota unmet: found {len(reviews)}, need {review_min}")
     chosen_reviews, diversity_relaxations = _take_diverse(reviews, review_min, [], config)
     if len(chosen_reviews) < review_min: raise RadarError(f"Review quota unmet after diversity selection: found {len(chosen_reviews)}, need {review_min}")
-    min_total, max_total = int(config.get("formal_min", 10)), int(config.get("formal_max", 15))
+    min_total, max_total = int(config.get("formal_min", 8)), int(config.get("formal_max", 15))
     hist_min, hist_max = int(config.get("historical_min", 7)), int(config.get("historical_max", 8))
     chosen: list[dict[str, Any]] = []
     formal_pool = _rank(research)

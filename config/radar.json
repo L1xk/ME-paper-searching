@@ -2,7 +2,7 @@
   "timezone": "Asia/Shanghai",
   "rolling_years": 6,
   "recent_days": 30,
-  "formal_min": 10,
+  "formal_min": 8,
   "formal_max": 15,
   "historical_min": 7,
   "historical_max": 8,

@@ -209,6 +209,35 @@ class DeepSeekTests(unittest.TestCase):
 
 
 class SelectionTests(unittest.TestCase):
+    def test_eight_qualified_papers_are_deliverable(self):
+        config = RadarConfig.from_path(ROOT / "config" / "radar.json")
+        papers = [enriched(i, "2022-03-12") for i in range(1, 7)]
+        papers += [
+            enriched(20, "2022-04-01", review=True, journal="Nature Reviews Chemistry"),
+            enriched(21, "2022-04-02", review=True, journal="Trends in Biotechnology"),
+        ]
+
+        chosen = select(papers, {"recommended": {}}, date(2026, 8, 17), config)
+
+        self.assertEqual(len(chosen["selected_formal"]), 8)
+        self.assertEqual(len(chosen["selected_reviews"]), 2)
+        self.assertEqual(sum(bool(x["top_journal"]) for x in chosen["selected_formal"]), 8)
+
+    def test_nine_qualified_papers_are_deliverable(self):
+        config = RadarConfig.from_path(ROOT / "config" / "radar.json")
+        papers = [enriched(i, "2022-03-12") for i in range(1, 8)]
+        papers += [
+            enriched(20, "2026-08-01", review=True, journal="Nature Reviews Chemistry"),
+            enriched(21, "2026-08-02", review=True, journal="Trends in Biotechnology"),
+        ]
+
+        chosen = select(papers, {"recommended": {}}, date(2026, 8, 17), config)
+
+        self.assertEqual(len(chosen["selected_formal"]), 9)
+        self.assertEqual(len(chosen["selected_reviews"]), 2)
+        self.assertEqual(sum(x["age_pool"] == "historical" for x in chosen["selected_formal"]), 7)
+        self.assertEqual(sum(bool(x["top_journal"]) for x in chosen["selected_formal"]), 9)
+
     def test_quotas_render_and_history_transaction(self):
         config = RadarConfig.from_path(ROOT / "config" / "radar.json")
         papers = [enriched(i, f"{2020 + i % 5}-03-12") for i in range(1, 10)]
@@ -242,6 +271,7 @@ class SelectionTests(unittest.TestCase):
 
     def test_only_verified_exceptional_non_top_can_fill(self):
         config = RadarConfig.from_path(ROOT / "config" / "radar.json")
+        config = RadarConfig({**config.raw, "formal_min": 10}, config.path, config.journals)
         papers = [enriched(i, "2022-03-12") for i in range(1, 7)]
         papers += [enriched(20, "2023-08-01", review=True), enriched(21, "2023-08-02", review=True)]
         papers += [enriched(30, "2026-08-05", top=False, exceptional=True, base_score=96), enriched(31, "2026-08-06", top=False, exceptional=True, base_score=95)]
@@ -267,6 +297,7 @@ class SelectionTests(unittest.TestCase):
 
     def test_historical_max_is_never_broken_to_fill(self):
         config = RadarConfig.from_path(ROOT / "config" / "radar.json")
+        config = RadarConfig({**config.raw, "formal_min": 10}, config.path, config.journals)
         papers = [enriched(i, f"{2020 + i % 5}-03-12") for i in range(1, 15)]
         papers += [enriched(50, "2024-01-01", review=True), enriched(51, "2024-02-01", review=True)]
         with self.assertRaisesRegex(RadarError, "Formal quota unmet"):
@@ -286,6 +317,44 @@ class SelectionTests(unittest.TestCase):
 
 
 class PipelineTests(unittest.TestCase):
+    def test_nine_qualified_papers_are_sent_and_committed(self):
+        papers = [enriched(i, "2022-03-12") for i in range(1, 8)]
+        papers += [
+            enriched(20, "2026-08-01", review=True, journal="Nature Reviews Chemistry"),
+            enriched(21, "2026-08-02", review=True, journal="Trends in Biotechnology"),
+        ]
+        with tempfile.TemporaryDirectory() as temp:
+            base = Path(temp)
+            history = base / "history.json"
+            history.write_text('{"version":1,"recommended":{}}', encoding="utf-8")
+            args = Namespace(
+                config=ROOT / "config" / "radar.json",
+                history=history,
+                usage=base / "usage.json",
+                delivery_state=base / "delivery_state.json",
+                automation_status=base / "automation_status.json",
+                output=base / "output",
+                issue_date="2026-08-17",
+                mode="production",
+                dry_run=False,
+                candidates=None,
+            )
+            with patch("me_protein_radar.pipeline.discover", return_value=(papers, [])), patch(
+                "me_protein_radar.pipeline.verify_all", side_effect=lambda rows, timeout: rows
+            ), patch("me_protein_radar.pipeline.DeepSeekClient", return_value=object()), patch(
+                "me_protein_radar.pipeline.screen_all", return_value=(papers, [])
+            ), patch(
+                "me_protein_radar.pipeline.summarize_selected",
+                side_effect=lambda selection, client: len(selection["selected_formal"]),
+            ), patch("me_protein_radar.pipeline.send_html") as sender:
+                result = run(args)
+
+            self.assertEqual(result["formal"], 9)
+            self.assertTrue(result["sent"])
+            self.assertTrue(result["history_committed"])
+            sender.assert_called_once()
+            self.assertEqual(len(json.loads(history.read_text(encoding="utf-8"))["recommended"]), 9)
+
     def test_history_changes_only_after_successful_production_send(self):
         papers = [enriched(i, f"{2020 + i % 5}-03-12") for i in range(1, 10)]
         papers += [enriched(20, "2026-08-01", review=True), enriched(21, "2026-08-02", review=True)]

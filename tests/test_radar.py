@@ -16,7 +16,7 @@ from me_protein_radar.discovery import build_review_search_specs, build_targeted
 from me_protein_radar.io_utils import RadarError, assess_journal, is_top_journal
 from me_protein_radar.http import request_bytes
 from me_protein_radar.render import render, subject
-from me_protein_radar.pipeline import run
+from me_protein_radar.pipeline import _failure_details, run
 from me_protein_radar.selection import commit_history, select
 from me_protein_radar.verification import verify_candidate
 
@@ -209,6 +209,27 @@ class DeepSeekTests(unittest.TestCase):
 
 
 class SelectionTests(unittest.TestCase):
+    def test_one_historical_paper_does_not_block_delivery(self):
+        config = RadarConfig.from_path(ROOT / "config" / "radar.json")
+        papers = [enriched(1, "2022-03-12", journal="Metabolic Engineering")]
+        papers += [
+            enriched(20, "2026-08-01", review=True, journal="Nature Reviews Chemistry"),
+            enriched(21, "2026-08-02", review=True, journal="Trends in Biotechnology"),
+        ]
+        papers += [
+            enriched(30, "2026-08-03", journal="ACS Catalysis", track="enzyme_engineering"),
+            enriched(31, "2026-08-04", journal="Nature Communications", track="integrated"),
+            enriched(32, "2026-08-05", journal="Nature Biotechnology", track="ai_protein"),
+            enriched(33, "2026-08-06", journal="Advanced Science", track="metabolic_engineering"),
+            enriched(34, "2026-08-07", journal="Cell Systems", track="integrated"),
+        ]
+
+        chosen = select(papers, {"recommended": {}}, date(2026, 8, 17), config)
+
+        self.assertEqual(len(chosen["selected_formal"]), 8)
+        self.assertEqual(sum(x["age_pool"] == "historical" for x in chosen["selected_formal"]), 1)
+        self.assertEqual(len(chosen["selected_reviews"]), 2)
+
     def test_eight_qualified_papers_are_deliverable(self):
         config = RadarConfig.from_path(ROOT / "config" / "radar.json")
         papers = [enriched(i, "2022-03-12") for i in range(1, 7)]
@@ -317,6 +338,12 @@ class SelectionTests(unittest.TestCase):
 
 
 class PipelineTests(unittest.TestCase):
+    def test_expected_failure_details_include_safe_message(self):
+        details = _failure_details(RadarError("Historical quota unmet: found 1, need 7"))
+        self.assertEqual(details["error_type"], "RadarError")
+        self.assertEqual(details["error_message"], "Historical quota unmet: found 1, need 7")
+        self.assertEqual(_failure_details(RuntimeError("do not expose this")), {"error_type": "RuntimeError"})
+
     def test_nine_qualified_papers_are_sent_and_committed(self):
         papers = [enriched(i, "2022-03-12") for i in range(1, 8)]
         papers += [

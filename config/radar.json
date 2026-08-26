@@ -4,7 +4,7 @@
   "recent_days": 30,
   "formal_min": 8,
   "formal_max": 15,
-  "historical_min": 7,
+  "historical_min": 0,
   "historical_max": 8,
   "review_min": 2,
   "review_max": 3,

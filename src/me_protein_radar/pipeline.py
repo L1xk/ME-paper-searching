@@ -197,6 +197,13 @@ def parser() -> argparse.ArgumentParser:
     return result
 
 
+def _failure_details(exc: Exception) -> dict[str, str]:
+    details = {"error_type": type(exc).__name__}
+    if isinstance(exc, RadarError):
+        details["error_message"] = " ".join(str(exc).split())[:1000]
+    return details
+
+
 def main(argv: list[str] | None = None) -> int:
     args = parser().parse_args(argv)
     issue = args.issue_date or date.today().isoformat()
@@ -219,7 +226,7 @@ def main(argv: list[str] | None = None) -> int:
                     outcome="failed",
                     trigger=os.getenv("GITHUB_EVENT_NAME", ""),
                     run_id=os.getenv("GITHUB_RUN_ID", ""),
-                    details={"error_type": type(exc).__name__},
+                    details=_failure_details(exc),
                 )
             except Exception as status_exc:
                 print(f"STATUS ERROR: {status_exc}", file=sys.stderr)

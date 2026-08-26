@@ -1,13 +1,13 @@
 {
   "version": 1,
   "last_check": {
-    "checked_at": "2026-08-25T11:38:35.474907+08:00",
-    "issue_date": "2026-08-25",
+    "checked_at": "2026-08-26T11:44:16.923873+08:00",
+    "issue_date": "2026-08-26",
     "period": "2026-W35",
     "mode": "production",
     "outcome": "failed",
     "trigger": "schedule",
-    "run_id": "32805534858",
+    "run_id": "32927276488",
     "error_type": "RadarError"
   },
   "last_success": {

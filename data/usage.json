@@ -2,11 +2,11 @@
   "version": 1,
   "months": {
     "2026-08": {
-      "prompt_tokens": 1269839,
-      "completion_tokens": 219290,
-      "calls": 982,
-      "attempts": 983,
-      "estimated_cny": 1.708419,
+      "prompt_tokens": 1408254,
+      "completion_tokens": 239406,
+      "calls": 1082,
+      "attempts": 1083,
+      "estimated_cny": 1.887066,
       "unconfirmed_cny": 0.002257,
       "model": "deepseek-v4-flash"
     }

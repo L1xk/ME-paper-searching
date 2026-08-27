@@ -1,25 +1,27 @@
 {
   "version": 1,
   "last_check": {
-    "checked_at": "2026-08-26T11:44:16.923873+08:00",
-    "issue_date": "2026-08-26",
+    "checked_at": "2026-08-27T21:11:57.282918+08:00",
+    "issue_date": "2026-08-27",
     "period": "2026-W35",
-    "mode": "production",
-    "outcome": "failed",
-    "trigger": "schedule",
-    "run_id": "32927276488",
-    "error_type": "RadarError"
-  },
-  "last_success": {
-    "checked_at": "2026-08-18T11:34:36.782363+08:00",
-    "issue_date": "2026-08-18",
-    "period": "2026-W34",
     "mode": "production",
     "outcome": "sent",
     "trigger": "schedule",
-    "run_id": "32095573044",
-    "formal_count": 10,
+    "run_id": "33075093964",
+    "formal_count": 8,
     "review_count": 2,
-    "budget_cny": 1.363598
+    "budget_cny": 2.071436
+  },
+  "last_success": {
+    "checked_at": "2026-08-27T21:11:57.282918+08:00",
+    "issue_date": "2026-08-27",
+    "period": "2026-W35",
+    "mode": "production",
+    "outcome": "sent",
+    "trigger": "schedule",
+    "run_id": "33075093964",
+    "formal_count": 8,
+    "review_count": 2,
+    "budget_cny": 2.071436
   }
 }

@@ -1,14 +1,15 @@
 {
   "version": 1,
   "last_check": {
-    "checked_at": "2026-08-30T16:32:55.974461+08:00",
-    "issue_date": "2026-08-30",
-    "period": "2026-W35",
+    "checked_at": "2026-08-31T16:59:55.002532+08:00",
+    "issue_date": "2026-08-31",
+    "period": "2026-W36",
     "mode": "production",
-    "outcome": "already_delivered",
+    "outcome": "failed",
     "trigger": "schedule",
-    "run_id": "33301845927",
-    "lock_source": "delivery_state"
+    "run_id": "33375097639",
+    "error_type": "RadarError",
+    "error_message": "Formal quota unmet: found 7, need 8; diagnostics: candidates=100, review_candidates=25, screened_eligible=76, screened_reviews=27, screened_top=27"
   },
   "last_success": {
     "checked_at": "2026-08-27T21:11:57.282918+08:00",

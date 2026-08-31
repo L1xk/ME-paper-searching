@@ -290,39 +290,70 @@ class SelectionTests(unittest.TestCase):
         self.assertFalse(any(x["is_preprint"] for x in chosen["selected_formal"]))
         self.assertEqual(chosen["preprint_watchlist"], [])
 
-    def test_only_verified_exceptional_non_top_can_fill(self):
+    def test_qualified_non_top_papers_compete_by_final_score(self):
         config = RadarConfig.from_path(ROOT / "config" / "radar.json")
-        config = RadarConfig({**config.raw, "formal_min": 10}, config.path, config.journals)
-        papers = [enriched(i, "2022-03-12") for i in range(1, 7)]
-        papers += [enriched(20, "2023-08-01", review=True), enriched(21, "2023-08-02", review=True)]
-        papers += [enriched(30, "2026-08-05", top=False, exceptional=True, base_score=96), enriched(31, "2026-08-06", top=False, exceptional=True, base_score=95)]
+        papers = [enriched(1, "2026-08-03", top=True, base_score=60)]
+        papers += [enriched(20, "2026-08-01", review=True), enriched(21, "2026-08-02", review=True)]
+        papers += [enriched(30, "2026-08-05", top=False, exceptional=False, base_score=90)]
         chosen = select(papers, {"recommended": {}}, date(2026, 8, 17), config)
-        self.assertEqual(sum(x["top_journal"] for x in chosen["selected_formal"]), 8)
-        exceptions = [x for x in chosen["selected_formal"] if x["quality_tier"] == "exceptional_non_top"]
-        self.assertEqual(len(exceptions), 2)
-        self.assertTrue(all(x["novelty_evidence_zh"] for x in exceptions))
-        exception_mail = render(chosen)
-        self.assertIn("创新例外 · 非 Top 期刊", exception_mail)
-        self.assertIn("创新例外依据", exception_mail)
+        scores = [x["final_score"] for x in chosen["selected_formal"]]
+        self.assertEqual(scores, sorted(scores, reverse=True))
+        non_top = next(x for x in chosen["selected_formal"] if not x["top_journal"])
+        low_top = next(x for x in chosen["selected_formal"] if x["doi"] == "10.9999/radar.1")
+        self.assertGreater(non_top["final_score"], low_top["final_score"])
+        self.assertLess(chosen["selected_formal"].index(non_top), chosen["selected_formal"].index(low_top))
+        self.assertEqual(non_top["quality_tier"], "qualified_non_top")
+        self.assertIn("合格补充 · 非 Top 期刊", render(chosen))
 
-        papers[-1] = enriched(31, "2026-08-06", top=False, exceptional=False, base_score=98)
-        with self.assertRaisesRegex(RadarError, "Formal quota unmet"):
-            select(papers, {"recommended": {}}, date(2026, 8, 17), config)
+    def test_non_top_papers_still_must_reach_score_threshold(self):
+        config = RadarConfig.from_path(ROOT / "config" / "radar.json")
+        papers = [
+            enriched(20, "2026-08-01", review=True),
+            enriched(21, "2026-08-02", review=True),
+            enriched(30, "2026-08-05", top=False, base_score=66),
+        ]
+        chosen = select(papers, {"recommended": {}}, date(2026, 8, 17), config)
+        self.assertEqual(len(chosen["selected_formal"]), 2)
+        self.assertIn(
+            {"title": "Engineering microbial pathway 30", "reason": "below score threshold"},
+            chosen["excluded"],
+        )
 
-    def test_zero_top_journals_blocks_delivery(self):
+    def test_selection_fills_to_fifteen_and_caps_reviews_at_three(self):
+        config = RadarConfig.from_path(ROOT / "config" / "radar.json")
+        papers = [
+            enriched(i, f"2026-08-{(i % 15) + 1:02d}", base_score=55, journal=f"Journal {i}")
+            for i in range(1, 19)
+        ]
+        papers += [
+            enriched(30 + i, f"2026-08-{i + 1:02d}", review=True, top=False, base_score=99, journal=f"Review Journal {i}")
+            for i in range(5)
+        ]
+        chosen = select(papers, {"recommended": {}}, date(2026, 8, 17), config)
+        self.assertEqual(len(chosen["selected_formal"]), 15)
+        self.assertEqual(len(chosen["selected_reviews"]), 3)
+        scores = [x["final_score"] for x in chosen["selected_formal"]]
+        self.assertEqual(scores, sorted(scores, reverse=True))
+
+    def test_zero_top_journals_can_deliver(self):
         config = RadarConfig.from_path(ROOT / "config" / "radar.json")
         papers = [enriched(i, f"{2020 + i % 5}-03-12", top=False) for i in range(1, 10)]
         papers += [enriched(20, "2026-08-01", review=True, top=False), enriched(21, "2026-08-02", review=True, top=False)]
-        with self.assertRaises(RadarError):
-            select(papers, {"recommended": {}}, date(2026, 8, 17), config)
+        chosen = select(papers, {"recommended": {}}, date(2026, 8, 17), config)
+        self.assertEqual(sum(x["top_journal"] for x in chosen["selected_formal"]), 0)
+        self.assertGreaterEqual(len(chosen["selected_formal"]), 10)
+        self.assertEqual(len(chosen["selected_reviews"]), 2)
+        self.assertIn("科研视角 · 非 Top 综述", render(chosen))
 
-    def test_historical_max_is_never_broken_to_fill(self):
+    def test_historical_max_is_never_broken_and_short_issue_can_deliver(self):
         config = RadarConfig.from_path(ROOT / "config" / "radar.json")
-        config = RadarConfig({**config.raw, "formal_min": 10}, config.path, config.journals)
         papers = [enriched(i, f"{2020 + i % 5}-03-12") for i in range(1, 15)]
         papers += [enriched(50, "2024-01-01", review=True), enriched(51, "2024-02-01", review=True)]
-        with self.assertRaisesRegex(RadarError, "Formal quota unmet"):
-            select(papers, {"recommended": {}}, date(2026, 8, 17), config)
+        chosen = select(papers, {"recommended": {}}, date(2026, 8, 17), config)
+        self.assertEqual(len(chosen["selected_formal"]), 8)
+        self.assertEqual(sum(x["age_pool"] == "historical" for x in chosen["selected_formal"]), 8)
+        self.assertTrue(chosen["quota_summary"]["below_target"])
+        self.assertIn("少于目标 10 篇，已按实际合格数量推送", render(chosen))
 
     def test_diversity_limits_apply_when_candidate_pool_allows(self):
         config = RadarConfig.from_path(ROOT / "config" / "radar.json")
@@ -344,8 +375,8 @@ class PipelineTests(unittest.TestCase):
         self.assertEqual(details["error_message"], "Historical quota unmet: found 1, need 7")
         self.assertEqual(_failure_details(RuntimeError("do not expose this")), {"error_type": "RuntimeError"})
 
-    def test_nine_qualified_papers_are_sent_and_committed(self):
-        papers = [enriched(i, "2022-03-12") for i in range(1, 8)]
+    def test_seven_qualified_papers_are_sent_and_committed(self):
+        papers = [enriched(i, "2022-03-12") for i in range(1, 6)]
         papers += [
             enriched(20, "2026-08-01", review=True, journal="Nature Reviews Chemistry"),
             enriched(21, "2026-08-02", review=True, journal="Trends in Biotechnology"),
@@ -376,11 +407,11 @@ class PipelineTests(unittest.TestCase):
             ), patch("me_protein_radar.pipeline.send_html") as sender:
                 result = run(args)
 
-            self.assertEqual(result["formal"], 9)
+            self.assertEqual(result["formal"], 7)
             self.assertTrue(result["sent"])
             self.assertTrue(result["history_committed"])
             sender.assert_called_once()
-            self.assertEqual(len(json.loads(history.read_text(encoding="utf-8"))["recommended"]), 9)
+            self.assertEqual(len(json.loads(history.read_text(encoding="utf-8"))["recommended"]), 7)
 
     def test_history_changes_only_after_successful_production_send(self):
         papers = [enriched(i, f"{2020 + i % 5}-03-12") for i in range(1, 10)]

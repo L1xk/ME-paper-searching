@@ -53,18 +53,7 @@ def prepare(record: dict[str, Any], issue_date: date, config: RadarConfig) -> tu
     if item.get("track") == "ai_protein" and item.get("document_type") not in {"review"} and not item.get("wet_lab"):
         return None, "AI for Protein lacks wet-lab validation"
     is_top = bool(item.get("top_journal"))
-    exceptional_score = float(config.get("exceptional_non_top_min_base_score", 94))
-    exceptional = (
-        not is_top
-        and item.get("document_type") == "article"
-        and bool(item.get("exceptional_novelty"))
-        and item.get("novelty_category") not in {None, "", "none"}
-        and bool(clean_text(item.get("novelty_evidence_zh")))
-        and float(item.get("base_score", 0)) >= exceptional_score
-    )
-    if not is_top and not exceptional:
-        return None, "non-Top journal without verified exceptional novelty"
-    item["quality_tier"] = "top_journal" if is_top else "exceptional_non_top"
+    item["quality_tier"] = "top_journal" if is_top else "qualified_non_top"
     top_bonus = float(config.get("top_journal_bonus", 8)) if item.get("top_journal") and not item["is_preprint"] else 0
     score = float(item.get("base_score", 0)) + TRACK_ADJUSTMENT.get(str(item.get("track")), -30) + TYPE_ADJUSTMENT.get(str(item.get("document_type")), 0) + top_bonus
     item["final_score"] = round(min(100, max(0, score)), 2)
@@ -76,7 +65,7 @@ def prepare(record: dict[str, Any], issue_date: date, config: RadarConfig) -> tu
 
 
 def _rank(items: list[dict[str, Any]]) -> list[dict[str, Any]]:
-    return sorted(items, key=lambda x: (bool(x.get("top_journal")), float(x["final_score"]), x.get("publication_date", ""), int(x.get("citation_count") or 0)), reverse=True)
+    return sorted(items, key=lambda x: (float(x["final_score"]), bool(x.get("top_journal")), x.get("publication_date", ""), int(x.get("citation_count") or 0)), reverse=True)
 
 
 def _venue_key(item: dict[str, Any]) -> str:
@@ -96,6 +85,8 @@ def _take_diverse(
     selected_keys = {str(item.get("record_key")) for item in selected}
     max_journal = int(config.get("max_same_journal", 2))
     max_track = int(config.get("max_same_track", 4))
+    review_max = int(config.get("review_max", 3))
+    historical_max = int(config.get("historical_max", 8))
     stages = [(True, True, "strict")]
     if config.get("relax_diversity_to_meet_quotas", True):
         stages += [(True, False, "track"), (False, False, "journal")]
@@ -105,6 +96,10 @@ def _take_diverse(
             if key in selected_keys or item in chosen:
                 continue
             current = selected + chosen
+            if item.get("document_type") == "review" and sum(row.get("document_type") == "review" for row in current) >= review_max:
+                continue
+            if item.get("age_pool") == "historical" and sum(row.get("age_pool") == "historical" for row in current) >= historical_max:
+                continue
             venue_counts = Counter(_venue_key(row) for row in current)
             track_counts = Counter(str(row.get("track")) for row in current)
             if enforce_journal and venue_counts[_venue_key(item)] >= max_journal:
@@ -129,62 +124,27 @@ def select(records: list[dict[str, Any]], history: dict[str, Any], issue_date: d
         if item is None: excluded.append({"title": record.get("title", ""), "reason": reason})
         else: eligible.append(item)
     reviews = _rank([x for x in eligible if not x.get("is_preprint") and x.get("document_type") == "review"])
-    research = _rank([x for x in eligible if not x.get("is_preprint") and x.get("document_type") == "article"])
-    review_min, review_max = int(config.get("review_min", 2)), int(config.get("review_max", 3))
+    formal_pool = _rank([x for x in eligible if not x.get("is_preprint") and x.get("document_type") in {"article", "review"}])
+    review_min = int(config.get("review_min", 2))
     if len(reviews) < review_min: raise RadarError(f"Review quota unmet: found {len(reviews)}, need {review_min}")
     chosen_reviews, diversity_relaxations = _take_diverse(reviews, review_min, [], config)
     if len(chosen_reviews) < review_min: raise RadarError(f"Review quota unmet after diversity selection: found {len(chosen_reviews)}, need {review_min}")
-    min_total, max_total = int(config.get("formal_min", 8)), int(config.get("formal_max", 15))
+    target_total, max_total = int(config.get("formal_min", 10)), int(config.get("formal_max", 15))
     hist_min, hist_max = int(config.get("historical_min", 0)), int(config.get("historical_max", 8))
-    chosen: list[dict[str, Any]] = []
-    formal_pool = _rank(research)
-    historical = [x for x in formal_pool if x["age_pool"] == "historical"]
-    recent = [x for x in formal_pool if x["age_pool"] == "recent"]
-    review_hist = sum(x["age_pool"] == "historical" for x in chosen_reviews)
-    incoming, relaxed = _take_diverse(historical, max(0, hist_max - review_hist), chosen_reviews, config)
-    chosen.extend(incoming)
+    remaining = [item for item in formal_pool if item not in chosen_reviews]
+    chosen, relaxed = _take_diverse(remaining, max_total - len(chosen_reviews), chosen_reviews, config)
     diversity_relaxations.extend(relaxed)
-    needed = max(0, min_total - len(chosen_reviews) - len(chosen))
-    incoming, relaxed = _take_diverse(recent, needed, chosen_reviews + chosen, config)
-    chosen.extend(incoming)
-    diversity_relaxations.extend(relaxed)
-    if len(chosen) + len(chosen_reviews) < min_total:
-        incoming, relaxed = _take_diverse(recent, min_total - len(chosen) - len(chosen_reviews), chosen_reviews + chosen, config)
-        chosen.extend(incoming)
-        diversity_relaxations.extend(relaxed)
-    if len(chosen) + len(chosen_reviews) < min_total:
-        current_hist = sum(x["age_pool"] == "historical" for x in chosen + chosen_reviews)
-        extra_review_pool = [item for item in reviews if item not in chosen_reviews and (item["age_pool"] != "historical" or current_hist < hist_max)]
-        extra_target = min(review_max - len(chosen_reviews), min_total - len(chosen) - len(chosen_reviews))
-        incoming, relaxed = _take_diverse(extra_review_pool, extra_target, chosen_reviews + chosen, config)
-        chosen_reviews.extend(incoming)
-        diversity_relaxations.extend(relaxed)
-    current_hist = sum(x["age_pool"] == "historical" for x in chosen + chosen_reviews)
-    if current_hist < hist_min and len(chosen_reviews) < review_max:
-        historic_reviews = [x for x in reviews if x not in chosen_reviews and x["age_pool"] == "historical"]
-        replaceable = [x for x in chosen if x["age_pool"] == "recent"]
-        for candidate, outgoing in zip(historic_reviews, replaceable):
-            if current_hist >= hist_min or len(chosen_reviews) >= review_max: break
-            incoming_rows, relaxed = _take_diverse([candidate], 1, [x for x in chosen + chosen_reviews if x is not outgoing], config)
-            if not incoming_rows:
-                continue
-            chosen.remove(outgoing)
-            chosen_reviews.append(incoming_rows[0])
-            diversity_relaxations.extend(relaxed)
-            current_hist += 1
-    formal = _rank(chosen + chosen_reviews)[:max_total]
+    formal = _rank(chosen_reviews + chosen)[:max_total]
     if any(x.get("is_preprint") or x.get("document_type") == "preprint" for x in formal):
         raise RadarError("Formal selection contains a preprint")
     hist_count = sum(x["age_pool"] == "historical" for x in formal)
-    if len(formal) < min_total: raise RadarError(f"Formal quota unmet: found {len(formal)}, need {min_total}")
+    if len(formal) < target_total and not bool(config.get("allow_below_formal_min", False)):
+        raise RadarError(f"Formal quota unmet: found {len(formal)}, need {target_total}")
     if hist_count < hist_min: raise RadarError(f"Historical quota unmet: found {hist_count}, need {hist_min}")
     if hist_count > hist_max: raise RadarError(f"Historical quota exceeded: found {hist_count}, maximum {hist_max}")
     top_count = sum(bool(x.get("top_journal")) for x in formal)
-    top_min = int(config.get("top_journal_min", 1))
+    top_min = int(config.get("top_journal_min", 0))
     if top_count < top_min: raise RadarError(f"Top journal quota unmet: found {top_count}, need {top_min}")
-    non_top_count = len(formal) - top_count
-    non_top_max = int(config.get("exceptional_non_top_max", 0))
-    if non_top_count > non_top_max: raise RadarError(f"Exceptional non-Top quota exceeded: found {non_top_count}, maximum {non_top_max}")
     venue_counts = Counter(_venue_key(item) for item in formal)
     track_counts = Counter(str(item.get("track")) for item in formal)
     return {
@@ -194,6 +154,12 @@ def select(records: list[dict[str, Any]], history: dict[str, Any], issue_date: d
         "selected_reviews": [x for x in formal if x.get("document_type") == "review"],
         "preprint_watchlist": [],
         "excluded": excluded,
+        "quota_summary": {
+            "target_min": target_total,
+            "maximum": max_total,
+            "actual": len(formal),
+            "below_target": len(formal) < target_total,
+        },
         "diversity_summary": {
             "journal_counts": dict(venue_counts),
             "track_counts": dict(track_counts),

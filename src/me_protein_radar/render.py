@@ -22,14 +22,15 @@ def link(record: dict[str, Any]) -> str:
 
 def block(record: dict[str, Any], anchor: str, number: str, *, preprint: bool = False) -> str:
     if preprint: badge = "前沿预警 · 未经同行评议"
-    elif record.get("document_type") == "review": badge = "科研视角 · 综述"
-    elif record.get("quality_tier") == "exceptional_non_top": badge = "创新例外 · 非 Top 期刊"
+    elif record.get("document_type") == "review" and record.get("quality_tier") == "qualified_non_top": badge = "科研视角 · 非 Top 综述"
+    elif record.get("document_type") == "review": badge = "科研视角 · Top 综述"
+    elif record.get("quality_tier") == "qualified_non_top": badge = "合格补充 · 非 Top 期刊"
     else: badge = TRACKS.get(str(record.get("track")), "原创研究")
     methods = "、".join(map(str, record.get("methods") or [])) or "未记录"
     sources = " / ".join(map(str, record.get("source_labels") or [])) or "未记录"
     action = "查看预印本" if preprint and not record.get("doi") else "打开 DOI"
     uncertainty = f'<br><strong>证据边界：</strong>{esc(record.get("uncertainty_note"))}' if record.get("uncertainty_note") else ""
-    novelty = f'<br><strong>创新例外依据：</strong>{esc(record.get("novelty_evidence_zh"))}' if record.get("quality_tier") == "exceptional_non_top" else ""
+    novelty = f'<br><strong>创新性依据：</strong>{esc(record.get("novelty_evidence_zh"))}' if record.get("exceptional_novelty") and record.get("novelty_evidence_zh") else ""
     return f'''<table id="{esc(anchor)}" role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin:0 0 18px;border:1px solid #dce3ea;border-radius:8px;background:#fff">
 <tr><td style="padding:20px 20px 8px"><div style="font-size:12px;color:#0b6b62;font-weight:bold">{esc(badge)} · {float(record.get('final_score', 0)):.1f} 分 · {esc(VERIFY.get(record.get('verification_level'), '核验未知'))}</div><h2 style="margin:8px 0 6px;font-size:20px;line-height:1.4;color:#17212b">{esc(number)}. {esc(record.get('title_zh') or record.get('title'))}</h2><div style="font-size:13px;line-height:1.55;color:#66717d">{esc(record.get('title'))}</div></td></tr>
 <tr><td style="padding:10px 20px"><div style="font-size:13px;color:#0b6b62;font-weight:bold;margin-bottom:5px">推荐理由</div><div style="font-size:16px;line-height:1.75;color:#26323d">{esc(record.get('recommendation_reason_zh'))}</div></td></tr>
@@ -60,9 +61,12 @@ def render(selection: dict[str, Any], warnings: list[str] | None = None) -> str:
     model_stats = selection.get("model_stats") or {}
     if model_stats:
         stats_html += f'<div style="margin-top:4px">两阶段模型：语义筛选 {int(model_stats.get("screened", 0))} · 通过 {int(model_stats.get("eligible_after_screening", 0))} · 最终中文摘要 {int(model_stats.get("summarized", 0))}</div>'
+    quota = selection.get("quota_summary") or {}
+    if quota.get("below_target"):
+        stats_html += f'<div style="margin-top:4px;color:#8a5a00">本期通过全部质量门槛的论文为 {int(quota.get("actual", 0))} 篇，少于目标 {int(quota.get("target_min", 10))} 篇，已按实际合格数量推送。</div>'
     relaxations = ((selection.get("diversity_summary") or {}).get("relaxations") or [])
     if relaxations:
-        stats_html += f'<div style="margin-top:4px;color:#8a5a00">为满足综述、历史和 Top 硬配额，本期弹性放宽多样性限制 {len(relaxations)} 次。</div>'
+        stats_html += f'<div style="margin-top:4px;color:#8a5a00">为满足综述配额并尽量选足高分论文，本期弹性放宽多样性限制 {len(relaxations)} 次。</div>'
     return f'''<!doctype html><html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>ME × Protein 周报</title></head><body style="margin:0;background:#eef2f5;font-family:Arial,'Microsoft YaHei',sans-serif;color:#26323d"><table role="presentation" width="100%" cellpadding="0" cellspacing="0"><tr><td align="center" style="padding:18px 8px"><table id="top" role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:680px;background:#f8fafb">
 <tr><td style="padding:28px 22px;background:#103c3a;color:#fff"><div style="font-size:14px;letter-spacing:1.6px;color:#bde7df">WEEKLY LITERATURE RADAR</div><h1 style="margin:8px 0 4px;font-size:32px">ME × Protein</h1><div style="font-size:15px;color:#d9efeb">{esc(selection['issue_date'])} · 微生物代谢工程与 AI 酶工程精选</div></td></tr>
 <tr><td style="padding:16px 14px;background:#fff"><table role="presentation" width="100%" cellspacing="6"><tr><td align="center" style="padding:12px;background:#e9f5f2"><div style="font-size:25px;font-weight:bold;color:#0b6b62">{len(formal)}</div><div style="font-size:12px">精选论文</div></td><td align="center" style="padding:12px;background:#fff4d6"><div style="font-size:25px;font-weight:bold;color:#8a5a00">{len(reviews)}</div><div style="font-size:12px">高质量综述</div></td></tr><tr><td align="center" style="padding:12px;background:#e9f5f2"><div style="font-size:25px;font-weight:bold;color:#0b6b62">{top_count}</div><div style="font-size:12px">Top 期刊</div></td><td align="center" style="padding:12px;background:#e9f5f2"><div style="font-size:25px;font-weight:bold;color:#0b6b62">{formal_zh}</div><div style="font-size:12px">中文摘要</div></td></tr></table></td></tr>

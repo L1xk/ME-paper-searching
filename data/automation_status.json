@@ -1,26 +1,27 @@
 {
   "version": 1,
   "last_check": {
-    "checked_at": "2026-08-31T16:59:55.002532+08:00",
-    "issue_date": "2026-08-31",
+    "checked_at": "2026-09-01T16:06:06.548770+08:00",
+    "issue_date": "2026-09-01",
     "period": "2026-W36",
-    "mode": "production",
-    "outcome": "failed",
-    "trigger": "schedule",
-    "run_id": "33375097639",
-    "error_type": "RadarError",
-    "error_message": "Formal quota unmet: found 7, need 8; diagnostics: candidates=100, review_candidates=25, screened_eligible=76, screened_reviews=27, screened_top=27"
-  },
-  "last_success": {
-    "checked_at": "2026-08-27T21:11:57.282918+08:00",
-    "issue_date": "2026-08-27",
-    "period": "2026-W35",
     "mode": "production",
     "outcome": "sent",
     "trigger": "schedule",
-    "run_id": "33075093964",
-    "formal_count": 8,
-    "review_count": 2,
-    "budget_cny": 2.071436
+    "run_id": "33484733071",
+    "formal_count": 15,
+    "review_count": 3,
+    "budget_cny": 0.193814
+  },
+  "last_success": {
+    "checked_at": "2026-09-01T16:06:06.548770+08:00",
+    "issue_date": "2026-09-01",
+    "period": "2026-W36",
+    "mode": "production",
+    "outcome": "sent",
+    "trigger": "schedule",
+    "run_id": "33484733071",
+    "formal_count": 15,
+    "review_count": 3,
+    "budget_cny": 0.193814
   }
 }

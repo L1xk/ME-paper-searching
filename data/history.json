@@ -108,6 +108,96 @@
       "title": "Laccase-induced modification of lignin nanoparticles: Mechanisms and fractional analysis.",
       "first_author": "Danila M Carvalho",
       "doi": "10.1016/j.biortech.2026.135726"
+    },
+    "doi:10.1016/j.ymben.2026.102542": {
+      "issue_date": "2026-09-01",
+      "title": "Alleviating the Crabtree Effect for High-Level Production of Squalene in Saccharomyces cerevisiae.",
+      "first_author": "Shuyan Tang",
+      "doi": "10.1016/j.ymben.2026.102542"
+    },
+    "doi:10.1016/j.biortech.2026.135685": {
+      "issue_date": "2026-09-01",
+      "title": "Synthetic microalgal-bacterial symbiotic system integrating oxidase-protease fusion enzyme for simultaneous removal of recalcitrant nitrogen-containing organic compounds and PET microplastics.",
+      "first_author": "Rui Xiao",
+      "doi": "10.1016/j.biortech.2026.135685"
+    },
+    "doi:10.1038/s41467-026-76119-w": {
+      "issue_date": "2026-09-01",
+      "title": "De novo L-(+)-tartaric acid biosynthesis in multi-modular engineered yeasts.",
+      "first_author": "Xuan Zhou",
+      "doi": "10.1038/s41467-026-76119-w"
+    },
+    "doi:10.1038/s41467-026-75973-y": {
+      "issue_date": "2026-09-01",
+      "title": "A hybrid system enables plasmid copy number control in yeast.",
+      "first_author": "Anni Li",
+      "doi": "10.1038/s41467-026-75973-y"
+    },
+    "doi:10.1038/s41467-025-67669-6": {
+      "issue_date": "2026-09-01",
+      "title": "Computational design of allulose-responsive biosensor toolbox for auto-inducible protein expression and CRISPRi mediated dynamic metabolic regulation.",
+      "first_author": "Dong Q",
+      "doi": "10.1038/s41467-025-67669-6"
+    },
+    "doi:10.1016/j.biortech.2026.134927": {
+      "issue_date": "2026-09-01",
+      "title": "Engineering a gut synthetic microbial community to enhance protein bioconversion from organic wastes by black soldier fly larvae",
+      "first_author": "Yongqiang Yu",
+      "doi": "10.1016/j.biortech.2026.134927"
+    },
+    "doi:10.1021/acssynbio.6c00300": {
+      "issue_date": "2026-09-01",
+      "title": "Microbial Synthesis of Daphnetin by Engineering 2-Oxoglutarate-Dependent Dioxygenases.",
+      "first_author": "Ji S",
+      "doi": "10.1021/acssynbio.6c00300"
+    },
+    "doi:10.1016/j.jbiotec.2026.08.006": {
+      "issue_date": "2026-09-01",
+      "title": "Combining adaptive laboratory evolution and metabolic engineering for efficient erythritol production from crude glycerol by Yarrowia lipolytica.",
+      "first_author": "Ling-Xuan Zhao",
+      "doi": "10.1016/j.jbiotec.2026.08.006"
+    },
+    "doi:10.1186/s40643-026-01017-4": {
+      "issue_date": "2026-09-01",
+      "title": "Integration of pathway balance and protein fusion enables de novo biosynthesis of (+)-bicyclogermacrene in Escherichia coli",
+      "first_author": "Chen-Yi Sun",
+      "doi": "10.1186/s40643-026-01017-4"
+    },
+    "doi:10.1016/j.ymben.2026.102532": {
+      "issue_date": "2026-09-01",
+      "title": "Methylotrophic yeast engineering for secreted protein production via precision fermentation: food ingredient proteins and synthetic biology strategies.",
+      "first_author": "Bingyin Peng",
+      "doi": "10.1016/j.ymben.2026.102532"
+    },
+    "doi:10.1016/j.copbio.2026.103556": {
+      "issue_date": "2026-09-01",
+      "title": "Evolutionary engineering of synthetic microbial consortia in bioproduction.",
+      "first_author": "Diego Ruiz-Sanchis",
+      "doi": "10.1016/j.copbio.2026.103556"
+    },
+    "doi:10.1002/biot.70300": {
+      "issue_date": "2026-09-01",
+      "title": "Evolutionary Adaptation and Targeted Metabolic Engineering Synergistically Improve Methanol-Derived Single-Cell Protein Production in Pichia pastoris.",
+      "first_author": "Chong Xie",
+      "doi": "10.1002/biot.70300"
+    },
+    "doi:10.1016/j.biotechadv.2026.109026": {
+      "issue_date": "2026-09-01",
+      "title": "Unlocking the hidden value of food waste: Critical insights into circular biorefineries via enzyme cocktails driven hydrolysis.",
+      "first_author": "Yu Liu",
+      "doi": "10.1016/j.biotechadv.2026.109026"
+    },
+    "doi:10.1039/d2gc04380g": {
+      "issue_date": "2026-09-01",
+      "title": "Combining protein and metabolic engineering to achieve green biosynthesis of 12β- O -Glc-PPD in Saccharomyces cerevisiae",
+      "first_author": "Chen Zhou",
+      "doi": "10.1039/d2gc04380g"
+    },
+    "doi:10.1039/d1gc02965g": {
+      "issue_date": "2026-09-01",
+      "title": "De novo biosynthesis of sex pheromone components of Helicoverpa armigera through an artificial pathway in yeast",
+      "first_author": "Yuguo Jiang",
+      "doi": "10.1039/d1gc02965g"
     }
   }
 }

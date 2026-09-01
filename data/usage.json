@@ -9,6 +9,15 @@
       "estimated_cny": 2.243102,
       "unconfirmed_cny": 0.002257,
       "model": "deepseek-v4-flash"
+    },
+    "2026-09": {
+      "prompt_tokens": 144264,
+      "completion_tokens": 24775,
+      "calls": 115,
+      "attempts": 115,
+      "estimated_cny": 0.193814,
+      "unconfirmed_cny": 0.0,
+      "model": "deepseek-v4-flash"
     }
   }
 }

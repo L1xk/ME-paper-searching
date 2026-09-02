@@ -1,16 +1,14 @@
 {
   "version": 1,
   "last_check": {
-    "checked_at": "2026-09-01T16:06:06.548770+08:00",
-    "issue_date": "2026-09-01",
+    "checked_at": "2026-09-02T15:19:53.925732+08:00",
+    "issue_date": "2026-09-02",
     "period": "2026-W36",
     "mode": "production",
-    "outcome": "sent",
+    "outcome": "already_delivered",
     "trigger": "schedule",
-    "run_id": "33484733071",
-    "formal_count": 15,
-    "review_count": 3,
-    "budget_cny": 0.193814
+    "run_id": "33603008038",
+    "lock_source": "delivery_state"
   },
   "last_success": {
     "checked_at": "2026-09-01T16:06:06.548770+08:00",

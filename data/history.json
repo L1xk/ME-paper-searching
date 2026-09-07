@@ -198,6 +198,96 @@
       "title": "De novo biosynthesis of sex pheromone components of Helicoverpa armigera through an artificial pathway in yeast",
       "first_author": "Yuguo Jiang",
       "doi": "10.1039/d1gc02965g"
+    },
+    "doi:10.1016/j.biotechadv.2026.109032": {
+      "issue_date": "2026-09-07",
+      "title": "From laboratory to industry: Systematic approaches to the biomanufacturing of short-chain diols.",
+      "first_author": "Shaolun Zhang",
+      "doi": "10.1016/j.biotechadv.2026.109032"
+    },
+    "doi:10.1016/j.ymben.2026.102547": {
+      "issue_date": "2026-09-07",
+      "title": "Genome-scale overexpression screening identifies product tolerance and efflux transport as key determinants of high-level L-tryptophan production in Escherichia coli.",
+      "first_author": "Yuchen Jiang",
+      "doi": "10.1016/j.ymben.2026.102547"
+    },
+    "doi:10.1126/sciadv.aeg6969": {
+      "issue_date": "2026-09-07",
+      "title": "De novo coassembly of functional chlorophyll- and carotenoid-protein complexes in",
+      "first_author": "Chenhao Li",
+      "doi": "10.1126/sciadv.aeg6969"
+    },
+    "doi:10.1016/j.ymben.2026.102546": {
+      "issue_date": "2026-09-07",
+      "title": "Engineering post-transcriptional regulation via synthetic membraneless organelles.",
+      "first_author": "Juntao Ke",
+      "doi": "10.1016/j.ymben.2026.102546"
+    },
+    "doi:10.1021/acs.jafc.6c07903": {
+      "issue_date": "2026-09-07",
+      "title": "Biosensor-driven Evolution and Transcriptome-Guided Chassis Engineering Enhance Endogenous l-Cysteine Supply for Ergothioneine Production.",
+      "first_author": "Suyu Wang",
+      "doi": "10.1021/acs.jafc.6c07903"
+    },
+    "doi:10.1016/j.biortech.2026.135755": {
+      "issue_date": "2026-09-07",
+      "title": "Substrate-mediated spatial cooperation in Bacillus-Saccharomyces consortia enhance starch hydrolysis and flavor formation during solid-state fermentation.",
+      "first_author": "Liming Wu",
+      "doi": "10.1016/j.biortech.2026.135755"
+    },
+    "doi:10.1016/j.ymben.2026.102540": {
+      "issue_date": "2026-09-07",
+      "title": "Engineering Escherichia coli to modulate hydrogen sulfide levels using insights from intestinal sulfur metabolism.",
+      "first_author": "Justin A Hayes",
+      "doi": "10.1016/j.ymben.2026.102540"
+    },
+    "doi:10.1016/j.ymben.2026.102531": {
+      "issue_date": "2026-09-07",
+      "title": "Metabolic engineering of Rhodococcus aromaticivorans RHA1 for muconic acid production from lignin.",
+      "first_author": "Anne T Lalande",
+      "doi": "10.1016/j.ymben.2026.102531"
+    },
+    "doi:10.1021/acs.jafc.6c05915": {
+      "issue_date": "2026-09-07",
+      "title": "Optimization of Laccase PmL Secretion and Thermal Stability via Calculation-Guided Design for Mycotoxin Degradation.",
+      "first_author": "Yuanyuan Zhe",
+      "doi": "10.1021/acs.jafc.6c05915"
+    },
+    "doi:10.1016/j.jbiotec.2026.08.013": {
+      "issue_date": "2026-09-07",
+      "title": "Reconstruction and metabolic regulation of O-succinyl-L-homoserine biosynthesis pathway in Escherichia coli W3110.",
+      "first_author": "Si-Min Huang",
+      "doi": "10.1016/j.jbiotec.2026.08.013"
+    },
+    "doi:10.1186/s12934-022-02001-1": {
+      "issue_date": "2026-09-07",
+      "title": "Construction of cell factory through combinatorial metabolic engineering for efficient production of itaconic acid",
+      "first_author": "Jiao Feng",
+      "doi": "10.1186/s12934-022-02001-1"
+    },
+    "doi:10.1016/j.biotechadv.2026.109030": {
+      "issue_date": "2026-09-07",
+      "title": "Transcriptional control of bacterial lignin funneling through regulator-ligand grammars and engineering strategies for chemical production.",
+      "first_author": "Ahmad Raza",
+      "doi": "10.1016/j.biotechadv.2026.109030"
+    },
+    "doi:10.1016/j.biortech.2026.135462": {
+      "issue_date": "2026-09-07",
+      "title": "Precursor supply and translational machinery engineering of Saccharomyces cerevisiae for improving cellular protein content and biomass-based microbial protein bioproduction.",
+      "first_author": "Liu Y",
+      "doi": "10.1016/j.biortech.2026.135462"
+    },
+    "doi:10.1007/s12010-026-05755-1": {
+      "issue_date": "2026-09-07",
+      "title": "Engineering Bacillus Subtilis for Efficient Biosynthesis of Riboflavin: Current Knowledge and Future Perspectives.",
+      "first_author": "Yu XZ",
+      "doi": "10.1007/s12010-026-05755-1"
+    },
+    "doi:10.1099/mgen.0.001811": {
+      "issue_date": "2026-09-07",
+      "title": "Transcriptomic shift in ethanol and amino acid metabolic genes regulated by Med15 during alcoholic fermentation.",
+      "first_author": "David G Cooper",
+      "doi": "10.1099/mgen.0.001811"
     }
   }
 }

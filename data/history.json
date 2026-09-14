@@ -288,6 +288,96 @@
       "title": "Transcriptomic shift in ethanol and amino acid metabolic genes regulated by Med15 during alcoholic fermentation.",
       "first_author": "David G Cooper",
       "doi": "10.1099/mgen.0.001811"
+    },
+    "doi:10.1016/j.biortech.2026.135844": {
+      "issue_date": "2026-09-14",
+      "title": "Key enzyme optimization and multi-node metabolic flux regulation drive l-arginine production in Escherichia coli.",
+      "first_author": "Xin Gao",
+      "doi": "10.1016/j.biortech.2026.135844"
+    },
+    "doi:10.1016/j.ymben.2026.102550": {
+      "issue_date": "2026-09-14",
+      "title": "Unraveling cadaverine toxicity effect to guide the engineering of robust strain.",
+      "first_author": "Yang Liao",
+      "doi": "10.1016/j.ymben.2026.102550"
+    },
+    "doi:10.1016/j.biortech.2026.135765": {
+      "issue_date": "2026-09-14",
+      "title": "Programming 2,3-butanediol biosynthesis in Saccharomyces cerevisiae with AI-optimized dual-optogenetic switches.",
+      "first_author": "Yang Sainan",
+      "doi": "10.1016/j.biortech.2026.135765"
+    },
+    "doi:10.1016/j.ymben.2026.102548": {
+      "issue_date": "2026-09-14",
+      "title": "Rewiring CYP11A1-coupled electron transfer boosts de novo progesterone production in yeast.",
+      "first_author": "Xuqian Fan",
+      "doi": "10.1016/j.ymben.2026.102548"
+    },
+    "doi:10.1038/s44160-026-01076-7": {
+      "issue_date": "2026-09-14",
+      "title": "Engineering de novo formatotrophy in the non-model yeast",
+      "first_author": "William Newell",
+      "doi": "10.1038/s44160-026-01076-7"
+    },
+    "doi:10.1016/j.biotechadv.2026.109037": {
+      "issue_date": "2026-09-14",
+      "title": "The isopentenol utilization pathway: enzyme engineering, metabolic integration, and applications in microbial terpenoid biosynthesis.",
+      "first_author": "Ye Chan Kim",
+      "doi": "10.1016/j.biotechadv.2026.109037"
+    },
+    "doi:10.1038/s41467-026-76332-7": {
+      "issue_date": "2026-09-14",
+      "title": "Host-aware Identification of Intrinsic Gene Expression Biopart Parameters using Combinatorial Libraries.",
+      "first_author": "Jesús Picó",
+      "doi": "10.1038/s41467-026-76332-7"
+    },
+    "doi:10.1016/j.tibtech.2026.08.011": {
+      "issue_date": "2026-09-14",
+      "title": "Engineering biosensors to enhance monoterpene indole alkaloid production in yeast.",
+      "first_author": "Maxence Holtz",
+      "doi": "10.1016/j.tibtech.2026.08.011"
+    },
+    "doi:10.1038/s41467-026-74128-3": {
+      "issue_date": "2026-09-14",
+      "title": "Integrating microbial cell factory with new-to-nature photobiocatalysis for de novo biosynthesis of D-homotryptophan.",
+      "first_author": "Guo Z",
+      "doi": "10.1038/s41467-026-74128-3"
+    },
+    "doi:10.1016/j.biotechadv.2026.109042": {
+      "issue_date": "2026-09-14",
+      "title": "Multidimensional metabolic engineering strategies for efficient production of branched-chain amino acids and their derivatives in Escherichia coli and Corynebacterium glutamicum.",
+      "first_author": "Guihong Zhao",
+      "doi": "10.1016/j.biotechadv.2026.109042"
+    },
+    "doi:10.1126/sciadv.adq3484": {
+      "issue_date": "2026-09-14",
+      "title": "Evolutionary engineering of <i>Saccharomyces cerevisiae</i>: Crafting a synthetic methylotroph via self-reprogramming.",
+      "first_author": "Guo F",
+      "doi": "10.1126/sciadv.adq3484"
+    },
+    "doi:10.1021/acs.jafc.6c09241": {
+      "issue_date": "2026-09-14",
+      "title": "Functional Characterization and Catalytic Mechanism of an Amidase Involved in Acetaminophen Degradation from Acinetobacter sp.",
+      "first_author": "Boxiang Kou",
+      "doi": "10.1021/acs.jafc.6c09241"
+    },
+    "doi:10.1021/acscatal.6c04391": {
+      "issue_date": "2026-09-14",
+      "title": "Sequence-guided engineering of a bacterial diterpene synthase induces further cyclization.",
+      "first_author": "Xiuting Wei",
+      "doi": "10.1021/acscatal.6c04391"
+    },
+    "doi:10.1021/jacs.6c11050": {
+      "issue_date": "2026-09-14",
+      "title": "Domain-Swapped LuxR-Type Quorum Sensing Receptors Reveal Divergent Ligand-Response Mechanisms among Homologues.",
+      "first_author": "Irene M Stoutland",
+      "doi": "10.1021/jacs.6c11050"
+    },
+    "doi:10.1038/s41467-026-76666-2": {
+      "issue_date": "2026-09-14",
+      "title": "Zinc displacement and metabolic interference: cobalt ion-mediated therapy for broad-spectrum CRKP-resistant pneumonia via inhalable microspheres.",
+      "first_author": "Zhaoyou Chu",
+      "doi": "10.1038/s41467-026-76666-2"
     }
   }
 }

@@ -558,6 +558,84 @@
       "title": "Enzymatic tailoring of prebiotic oligosaccharides, flavonoids, and terpenoids for enhanced physiological effects.",
       "first_author": "Dan-Gyeong Han",
       "doi": "10.1016/j.copbio.2026.103584"
+    },
+    "doi:10.1016/j.biortech.2026.134994": {
+      "issue_date": "2026-10-05",
+      "title": "Modular pathway engineering enables gram-scale de novo biosynthesis of narirutin in yeast",
+      "first_author": "Qiyuan Lu",
+      "doi": "10.1016/j.biortech.2026.134994"
+    },
+    "doi:10.1002/anie.9826344": {
+      "issue_date": "2026-10-05",
+      "title": "Structural and Mechanistic Basis of Dual Substrate Promiscuity in the Acyltransferase AntB Enables Late-Stage Diversification of Natural Products.",
+      "first_author": "Mengmeng Zheng",
+      "doi": "10.1002/anie.9826344"
+    },
+    "doi:10.1016/j.tibtech.2026.09.006": {
+      "issue_date": "2026-10-05",
+      "title": "Metabolic engineering of Saccharomyces cerevisiae for the biosynthesis of indole-derived compounds.",
+      "first_author": "Mengchu Sun",
+      "doi": "10.1016/j.tibtech.2026.09.006"
+    },
+    "doi:10.1021/jacs.6c03677": {
+      "issue_date": "2026-10-05",
+      "title": "Toward Solar-Powered Growth of Autotrophic <i>Escherichia coli</i> Using Photoelectrochemistry.",
+      "first_author": "Su L",
+      "doi": "10.1021/jacs.6c03677"
+    },
+    "doi:10.1016/j.biortech.2026.134731": {
+      "issue_date": "2026-10-05",
+      "title": "Development of robust dominant-metabolism compromised intermediate chassis of ethanologenic Saccharomyces cerevisiae for non-ethanol biochemical production.",
+      "first_author": "Zhou Q",
+      "doi": "10.1016/j.biortech.2026.134731"
+    },
+    "doi:10.1016/j.ymben.2026.04.004": {
+      "issue_date": "2026-10-05",
+      "title": "Protein phase separation for enhanced production of 3-hydroxypropionate and polyhydroxybutyrate by Halomonas.",
+      "first_author": "Yi X",
+      "doi": "10.1016/j.ymben.2026.04.004"
+    },
+    "doi:10.1016/j.biortech.2026.136008": {
+      "issue_date": "2026-10-05",
+      "title": "Topology-controlled polymer brushes on LDPE for enhanced cellulase immobilization and lignocellulose conversion.",
+      "first_author": "Yuchong Liu",
+      "doi": "10.1016/j.biortech.2026.136008"
+    },
+    "doi:10.1038/s41589-025-02081-1": {
+      "issue_date": "2026-10-05",
+      "title": "Programmable cell-cell adhesion in synthetic yeast communities for improved bioproduction.",
+      "first_author": "Chen H",
+      "doi": "10.1038/s41589-025-02081-1"
+    },
+    "doi:10.1007/s10529-026-03797-3": {
+      "issue_date": "2026-10-05",
+      "title": "Metabolic unlocking of lycopene accumulation in the oleaginous yeast Rhodotorula toruloides.",
+      "first_author": "Shuang Wang",
+      "doi": "10.1007/s10529-026-03797-3"
+    },
+    "doi:10.1007/10_2026_355": {
+      "issue_date": "2026-10-05",
+      "title": "Biosynthesis and Biotransformation of Plant Triterpenoids: Current Advances and Future Perspectives.",
+      "first_author": "Xiang L",
+      "doi": "10.1007/10_2026_355"
+    },
+    "doi:10.3390/microorganisms14091869": {
+      "issue_date": "2026-10-05",
+      "title": "Biosynthesis and Microbial Production of Carminic Acid: From Pathway Elucidation to Synthetic Biology.",
+      "first_author": "Hongyu Li",
+      "doi": "10.3390/microorganisms14091869"
+    },
+    "doi:10.1002/advs.75865": {
+      "issue_date": "2026-10-05",
+      "title": "Engineered Optogenetic Circuits In Yeast with Self-Sustained Outputs.",
+      "first_author": "Fan C",
+      "doi": "10.1002/advs.75865"
+    },
+    "doi:10.1007/s00203-026-05217-6": {
+      "issue_date": "2026-10-05",
+      "title": "Dynamic, model-guided intensification of fuel ethanol production in yeast: proteome constraints, CRISPR rewiring, and high-gravity fermentations.",
+      "first_author": "Wania Azhar",
+      "doi": "10.1007/s00203-026-05217-6"
     }
   }
 }

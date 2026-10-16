@@ -1,13 +1,13 @@
 {
   "version": 1,
   "last_check": {
-    "checked_at": "2026-10-15T15:44:02.753544+08:00",
-    "issue_date": "2026-10-15",
+    "checked_at": "2026-10-16T15:32:09.918090+08:00",
+    "issue_date": "2026-10-16",
     "period": "2026-W42",
     "mode": "production",
     "outcome": "already_delivered",
     "trigger": "schedule",
-    "run_id": "38700724442",
+    "run_id": "38867810083",
     "lock_source": "delivery_state"
   },
   "last_success": {

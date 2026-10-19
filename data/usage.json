@@ -20,11 +20,11 @@
       "model": "deepseek-v4-flash"
     },
     "2026-10": {
-      "prompt_tokens": 349244,
-      "completion_tokens": 63255,
-      "calls": 226,
-      "attempts": 226,
-      "estimated_cny": 0.475754,
+      "prompt_tokens": 521905,
+      "completion_tokens": 93880,
+      "calls": 340,
+      "attempts": 340,
+      "estimated_cny": 0.709665,
       "unconfirmed_cny": 0.0,
       "model": "deepseek-v4-flash"
     }

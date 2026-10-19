@@ -1,25 +1,27 @@
 {
   "version": 1,
   "last_check": {
-    "checked_at": "2026-10-18T15:26:10.238808+08:00",
-    "issue_date": "2026-10-18",
-    "period": "2026-W42",
-    "mode": "production",
-    "outcome": "already_delivered",
-    "trigger": "schedule",
-    "run_id": "39107635418",
-    "lock_source": "delivery_state"
-  },
-  "last_success": {
-    "checked_at": "2026-10-12T17:53:27.023077+08:00",
-    "issue_date": "2026-10-12",
-    "period": "2026-W42",
+    "checked_at": "2026-10-19T16:13:10.898018+08:00",
+    "issue_date": "2026-10-19",
+    "period": "2026-W43",
     "mode": "production",
     "outcome": "sent",
     "trigger": "schedule",
-    "run_id": "38232071729",
-    "formal_count": 12,
+    "run_id": "39220299954",
+    "formal_count": 13,
     "review_count": 3,
-    "budget_cny": 0.475754
+    "budget_cny": 0.709665
+  },
+  "last_success": {
+    "checked_at": "2026-10-19T16:13:10.898018+08:00",
+    "issue_date": "2026-10-19",
+    "period": "2026-W43",
+    "mode": "production",
+    "outcome": "sent",
+    "trigger": "schedule",
+    "run_id": "39220299954",
+    "formal_count": 13,
+    "review_count": 3,
+    "budget_cny": 0.709665
   }
 }

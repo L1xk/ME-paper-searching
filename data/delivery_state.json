@@ -81,6 +81,15 @@
       "review_count": 3,
       "subject": "ME × Protein 周报 | 2026-10-12 | 精选 12 篇",
       "source": "smtp"
+    },
+    "2026-W43": {
+      "status": "sent",
+      "issue_date": "2026-10-19",
+      "sent_at": "2026-10-19T16:13:10.897722+08:00",
+      "formal_count": 13,
+      "review_count": 3,
+      "subject": "ME × Protein 周报 | 2026-10-19 | 精选 13 篇",
+      "source": "smtp"
     }
   }
 }

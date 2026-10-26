@@ -786,6 +786,96 @@
       "title": "Automated strain-to-peptide conversion: a high-throughput proteome analysis platform empowering rational design of microbial cell factories.",
       "first_author": "Wu Y",
       "doi": "10.1016/j.biortech.2026.134010"
+    },
+    "doi:10.1021/acs.jafc.5c17944": {
+      "issue_date": "2026-10-26",
+      "title": "Identification and Engineering of a β-1,3-Galactosyltransferase for Efficient Lacto-N-Tetraose Production.",
+      "first_author": "Wei Tao",
+      "doi": "10.1021/acs.jafc.5c17944"
+    },
+    "doi:10.1021/jacs.6c16809": {
+      "issue_date": "2026-10-26",
+      "title": "A Radical Addition-Diradical Coupling Switch Unifies Cytochrome P450-Catalyzed Diketopiperazine Dimerization.",
+      "first_author": "Yeqing Du",
+      "doi": "10.1021/jacs.6c16809"
+    },
+    "doi:10.1021/acs.jafc.6c05635": {
+      "issue_date": "2026-10-26",
+      "title": "Integrated Transporter Engineering and Semi-Rational Enzyme Design in Corynebacterium glutamicum for High-Level Natural Blue Pigment Indigoidine Production.",
+      "first_author": "Sun J",
+      "doi": "10.1021/acs.jafc.6c05635"
+    },
+    "doi:10.1021/acs.jafc.6c09088": {
+      "issue_date": "2026-10-26",
+      "title": "Metabolic Engineering of Escherichia coli Nissle 1917 for Efficient Production of Caffeic Acid.",
+      "first_author": "Miaomiao Zhuang",
+      "doi": "10.1021/acs.jafc.6c09088"
+    },
+    "doi:10.1021/acs.jafc.6c08735": {
+      "issue_date": "2026-10-26",
+      "title": "Biosynthesis of 3-Hydroxy-3-methylbutyrate by Probiotic Escherichia coli Nissle 1917.",
+      "first_author": "Jenny Ji-Chan Hung",
+      "doi": "10.1021/acs.jafc.6c08735"
+    },
+    "doi:10.1038/s41586-026-11205-z": {
+      "issue_date": "2026-10-26",
+      "title": "Programmable design of functional proteins from natural language.",
+      "first_author": "Fengyuan Dai",
+      "doi": "10.1038/s41586-026-11205-z"
+    },
+    "doi:10.1038/s41586-026-11317-6": {
+      "issue_date": "2026-10-26",
+      "title": "De novo design of enantioselective artificial metalloenzyme photocatalysts.",
+      "first_author": "Sandip Mishra",
+      "doi": "10.1038/s41586-026-11317-6"
+    },
+    "doi:10.1038/s41587-026-03360-5": {
+      "issue_date": "2026-10-26",
+      "title": "Genetic code expansion enables plant-directed control of bacterial activity.",
+      "first_author": "Vivian Zhong",
+      "doi": "10.1038/s41587-026-03360-5"
+    },
+    "doi:10.1021/acssynbio.6c00417": {
+      "issue_date": "2026-10-26",
+      "title": "Balancing Precursor Supply and Enhancing Enzyme Solubility for Efficient Production of (S)-Reticuline in Escherichia coli.",
+      "first_author": "Xiaxia Zhang",
+      "doi": "10.1021/acssynbio.6c00417"
+    },
+    "doi:10.1021/acssynbio.6c00344": {
+      "issue_date": "2026-10-26",
+      "title": "AI-Guided Engineering of Tunable CcdB Variants for Flexible Selection in Escherichia coli.",
+      "first_author": "Pengpai Li",
+      "doi": "10.1021/acssynbio.6c00344"
+    },
+    "doi:10.1016/j.biotechadv.2026.109080": {
+      "issue_date": "2026-10-26",
+      "title": "Termite-microbiome symbiosis as a bioreactor model for lignocellulosic biomass pretreatment and biorefinery.",
+      "first_author": "Michael N Wiafe",
+      "doi": "10.1016/j.biotechadv.2026.109080"
+    },
+    "doi:10.1021/acs.jafc.6c06419": {
+      "issue_date": "2026-10-26",
+      "title": "Advances in Metabolic Engineering for Biosynthesis of 5-Aminolevulinic Acid.",
+      "first_author": "Yuanyuan Sha",
+      "doi": "10.1021/acs.jafc.6c06419"
+    },
+    "doi:10.1007/s11274-026-05361-7": {
+      "issue_date": "2026-10-26",
+      "title": "High efficient production of adenine in Bacillus subtilis with novel metabolic engineering strategies.",
+      "first_author": "Shuang Han",
+      "doi": "10.1007/s11274-026-05361-7"
+    },
+    "doi:10.1002/bit.70414": {
+      "issue_date": "2026-10-26",
+      "title": "Engineering 4-Vinylcatechol Biosynthesis in Escherichia coli Through Host-Enzyme Combination.",
+      "first_author": "Esra Kaynak",
+      "doi": "10.1002/bit.70414"
+    },
+    "doi:10.1080/21501203.2026.2716430": {
+      "issue_date": "2026-10-26",
+      "title": "AI-enabled fungal biomanufacturing: from genome mining to the artificial intelligence virtual cell",
+      "first_author": "Wang Z",
+      "doi": "10.1080/21501203.2026.2716430"
     }
   }
 }

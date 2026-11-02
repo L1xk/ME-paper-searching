@@ -876,6 +876,96 @@
       "title": "AI-enabled fungal biomanufacturing: from genome mining to the artificial intelligence virtual cell",
       "first_author": "Wang Z",
       "doi": "10.1080/21501203.2026.2716430"
+    },
+    "doi:10.1038/s41467-026-78159-8": {
+      "issue_date": "2026-11-02",
+      "title": "Metal cofactor-level chassis engineering enables aerobic expression of tungsten formate dehydrogenases in Escherichia coli.",
+      "first_author": "Uyen Thu Phan",
+      "doi": "10.1038/s41467-026-78159-8"
+    },
+    "doi:10.1038/s41467-026-78191-8": {
+      "issue_date": "2026-11-02",
+      "title": "ATHENA: a dynamic metabolic hub balancing carbon economy and energy supply in microbial synthesis.",
+      "first_author": "Likun Guo",
+      "doi": "10.1038/s41467-026-78191-8"
+    },
+    "doi:10.1021/jacs.6c10662": {
+      "issue_date": "2026-11-02",
+      "title": "A Bacterial Pathway for Homotaurine Catabolism via Sulfopropanoate.",
+      "first_author": "Luise Pallasdies",
+      "doi": "10.1021/jacs.6c10662"
+    },
+    "doi:10.1021/acs.jafc.6c05419": {
+      "issue_date": "2026-11-02",
+      "title": "Metabolic Engineering of Saccharomyces cerevisiae for Flavonoid Synthesis from Acetate.",
+      "first_author": "Mei Li",
+      "doi": "10.1021/acs.jafc.6c05419"
+    },
+    "doi:10.1021/acs.jafc.6c11041": {
+      "issue_date": "2026-11-02",
+      "title": "Rational Engineering of Carboxylic Acid Reductase for Improved Catalytic Efficiency and Substrate Tolerance Enabling Green Vanillin Biosynthesis.",
+      "first_author": "Hanyu Zhu",
+      "doi": "10.1021/acs.jafc.6c11041"
+    },
+    "doi:10.1016/j.jare.2026.10.044": {
+      "issue_date": "2026-11-02",
+      "title": "From discovery to engineering: revealing and optimizing the indigoids biosynthesis by FMO from Indigofera tinctoria.",
+      "first_author": "Chang Liu",
+      "doi": "10.1016/j.jare.2026.10.044"
+    },
+    "doi:10.1126/sciadv.aej6280": {
+      "issue_date": "2026-11-02",
+      "title": "Engineering bacterial morphology through MreB remodeling enhances one-carbon metabolism for sustainable bioproduction.",
+      "first_author": "Yun Chen",
+      "doi": "10.1126/sciadv.aej6280"
+    },
+    "doi:10.1016/j.biotechadv.2026.109086": {
+      "issue_date": "2026-11-02",
+      "title": "Engineering Methylobacterium as a C1 biomanufacturing platform: Metabolic architecture, regulatory networks, and synthetic biology strategies.",
+      "first_author": "Lu Yao",
+      "doi": "10.1016/j.biotechadv.2026.109086"
+    },
+    "doi:10.1016/j.biotechadv.2026.109085": {
+      "issue_date": "2026-11-02",
+      "title": "How far do we need to go to upscale carbon elongation from bench- to industrial-scale?",
+      "first_author": "Jing Li",
+      "doi": "10.1016/j.biotechadv.2026.109085"
+    },
+    "doi:10.3390/biom16101450": {
+      "issue_date": "2026-11-02",
+      "title": "Metabolic Engineering of",
+      "first_author": "Fengliu Lu",
+      "doi": "10.3390/biom16101450"
+    },
+    "doi:10.3390/microorganisms14102209": {
+      "issue_date": "2026-11-02",
+      "title": "Synthetic Biology and Systems Metabolic Engineering of Aminoglycoside Antibiotics: From Biosynthetic Pathways to Resistance-Evading and Low-Toxicity Design.",
+      "first_author": "Shan Chu",
+      "doi": "10.3390/microorganisms14102209"
+    },
+    "doi:10.1016/j.biortech.2026.136158": {
+      "issue_date": "2026-11-02",
+      "title": "Valorization of soy sauce lees through sequential aerobic-anaerobic solid-state fermentation: Process optimization, nutritional transformation and bacterial community restructuring.",
+      "first_author": "Tianle He",
+      "doi": "10.1016/j.biortech.2026.136158"
+    },
+    "doi:10.1016/j.jbiosc.2026.10.001": {
+      "issue_date": "2026-11-02",
+      "title": "Kinetic metabolic modeling of Saccharomyces cerevisiae mutants reveals two major regulatory patterns of glycolytic flux control.",
+      "first_author": "Genki Sato",
+      "doi": "10.1016/j.jbiosc.2026.10.001"
+    },
+    "doi:10.1128/aem.00955-26": {
+      "issue_date": "2026-11-02",
+      "title": "Mechanistic insights into atmospheric and room-temperature plasma (ARTP)-induced genomic alterations and phenotypic evolution in",
+      "first_author": "Huan Sheng",
+      "doi": "10.1128/aem.00955-26"
+    },
+    "doi:10.1016/j.biortech.2026.136154": {
+      "issue_date": "2026-11-02",
+      "title": "Comparison of two genetic systems for protein production in Cupriavidus necator H16.",
+      "first_author": "Matteo Vajente",
+      "doi": "10.1016/j.biortech.2026.136154"
     }
   }
 }

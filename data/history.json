@@ -966,6 +966,78 @@
       "title": "Comparison of two genetic systems for protein production in Cupriavidus necator H16.",
       "first_author": "Matteo Vajente",
       "doi": "10.1016/j.biortech.2026.136154"
+    },
+    "doi:10.1016/j.ymben.2026.102577": {
+      "issue_date": "2026-11-09",
+      "title": "Advancing terpenoid biosynthesis in Saccharomyces cerevisiae: Synthetic biology approaches for efficient longifolene production.",
+      "first_author": "Weiqiang Zhang",
+      "doi": "10.1016/j.ymben.2026.102577"
+    },
+    "doi:10.1016/j.biortech.2026.136186": {
+      "issue_date": "2026-11-09",
+      "title": "Engineering a whole-cell catalyst for enhanced production of 2,5-bis(hydroxymethyl)furan and comparative cellular responses to deep eutectic solvents.",
+      "first_author": "Sumin Ge",
+      "doi": "10.1016/j.biortech.2026.136186"
+    },
+    "doi:10.1021/acs.jafc.6c05347": {
+      "issue_date": "2026-11-09",
+      "title": "Modular Pathway Engineering of an Escherichia coli Platform for De Novo Synthesis of Steviol Glycoside Precursors from Glucose.",
+      "first_author": "Xuan Luo",
+      "doi": "10.1021/acs.jafc.6c05347"
+    },
+    "doi:10.1021/acs.jafc.6c01629": {
+      "issue_date": "2026-11-09",
+      "title": "Metabolic Engineering Strategies for Rare d-Allulose Production from d-Glucose-d-Xylose Mixtures Using Escherichia coli.",
+      "first_author": "Zheng-Sheng Shi",
+      "doi": "10.1021/acs.jafc.6c01629"
+    },
+    "doi:10.1021/acssynbio.6c00568": {
+      "issue_date": "2026-11-09",
+      "title": "Enzyme and Metabolic Engineering Enable High-Level δ-Cadinene Production in Serratia marcescens",
+      "first_author": "Bingshuo Zhang",
+      "doi": "10.1021/acssynbio.6c00568"
+    },
+    "doi:10.1016/j.biortech.2026.136205": {
+      "issue_date": "2026-11-09",
+      "title": "Characteristic metabolite emergence and coordinated multi-omics reprogramming in a four-member synthetic Streptomyces consortium during rice straw deconstruction.",
+      "first_author": "Yanjie Jiao",
+      "doi": "10.1016/j.biortech.2026.136205"
+    },
+    "doi:10.1016/j.ymben.2026.102576": {
+      "issue_date": "2026-11-09",
+      "title": "Multi-dataset INST",
+      "first_author": "Jochen Nießer",
+      "doi": "10.1016/j.ymben.2026.102576"
+    },
+    "doi:10.1016/j.biotechadv.2026.109081": {
+      "issue_date": "2026-11-09",
+      "title": "Decoding the landscape in biomanufacturing of xylose: metabolic bottlenecks and computation-assisted strategies.",
+      "first_author": "Luheng Zou",
+      "doi": "10.1016/j.biotechadv.2026.109081"
+    },
+    "doi:10.1126/sciadv.aeg5924": {
+      "issue_date": "2026-11-09",
+      "title": "Spatial control of enzyme orientation at the lipid droplet interface enables regio- and chemoselective metabolic flux.",
+      "first_author": "So-Hee Son",
+      "doi": "10.1126/sciadv.aeg5924"
+    },
+    "doi:10.1002/yea.70059": {
+      "issue_date": "2026-11-09",
+      "title": "Global Metabolic Rewiring Induced by HAC1 Overexpression Facilitates Efficient Linalool Synthesis in Saccharomyces cerevisiae.",
+      "first_author": "Aneesha Abdulla",
+      "doi": "10.1002/yea.70059"
+    },
+    "doi:10.1016/j.cbpa.2026.102816": {
+      "issue_date": "2026-11-09",
+      "title": "From prediction to creation: How AI-driven design is reshaping microbial biocatalysis.",
+      "first_author": "Gregory Guirimand",
+      "doi": "10.1016/j.cbpa.2026.102816"
+    },
+    "doi:10.1002/bit.70272": {
+      "issue_date": "2026-11-09",
+      "title": "Bacterial Laccase: Recent Advances in Production, Engineering Strategies, and Diagnostic Applications.",
+      "first_author": "Mardiyono FW",
+      "doi": "10.1002/bit.70272"
     }
   }
 }

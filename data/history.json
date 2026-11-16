@@ -1038,6 +1038,96 @@
       "title": "Bacterial Laccase: Recent Advances in Production, Engineering Strategies, and Diagnostic Applications.",
       "first_author": "Mardiyono FW",
       "doi": "10.1002/bit.70272"
+    },
+    "doi:10.1016/j.biortech.2026.136216": {
+      "issue_date": "2026-11-16",
+      "title": "High-level de novo biosynthesis of pyridoxal 5'-phosphate in Bacillus licheniformis by systems engineering.",
+      "first_author": "Shiyi Wang",
+      "doi": "10.1016/j.biortech.2026.136216"
+    },
+    "doi:10.1016/j.biortech.2026.136218": {
+      "issue_date": "2026-11-16",
+      "title": "Protein language model-assisted engineering of a high-performance polyethylene terephthalate hydrolase for enhanced biorecycling.",
+      "first_author": "Xiaoqian Liu",
+      "doi": "10.1016/j.biortech.2026.136218"
+    },
+    "doi:10.1038/s41467-026-78647-x": {
+      "issue_date": "2026-11-16",
+      "title": "Coupling hfCas13d with Circular gRNA Array Precursors Extends RNA Knockdown and Improves Biocatalysis in Yeast.",
+      "first_author": "Xuan-Mai Thi Le",
+      "doi": "10.1038/s41467-026-78647-x"
+    },
+    "doi:10.1038/s41467-026-78481-1": {
+      "issue_date": "2026-11-16",
+      "title": "Replacing anaerobic fermentation with reverse β-oxidation enables growth-coupled evolution for enhanced fatty-alcohol production.",
+      "first_author": "Bridgie Cawthon",
+      "doi": "10.1038/s41467-026-78481-1"
+    },
+    "doi:10.1016/j.ymben.2026.102579": {
+      "issue_date": "2026-11-16",
+      "title": "Upgrading yeast-based low-carbon biomanufacturing by harnessing a universal in vivo evolution system.",
+      "first_author": "Shirui Duan",
+      "doi": "10.1016/j.ymben.2026.102579"
+    },
+    "doi:10.1016/j.isci.2026.118029": {
+      "issue_date": "2026-11-16",
+      "title": "ATP-free fatty aldehyde biosynthesis enables an autonomous lux-based bioluminescence system.",
+      "first_author": "Kusuma SH",
+      "doi": "10.1016/j.isci.2026.118029"
+    },
+    "doi:10.1021/acs.jafc.6c11461": {
+      "issue_date": "2026-11-16",
+      "title": "Cell Wall Engineering of Kluyveromyces lactis for Efficient Extracellular Production of Bovine Chymosin.",
+      "first_author": "Yuechen Song",
+      "doi": "10.1021/acs.jafc.6c11461"
+    },
+    "doi:10.1186/s12934-026-03076-w": {
+      "issue_date": "2026-11-16",
+      "title": "Microbial production of geranyllinalool at near 10 g per liter.",
+      "first_author": "Yi Zhou",
+      "doi": "10.1186/s12934-026-03076-w"
+    },
+    "doi:10.1021/jacs.6c17478": {
+      "issue_date": "2026-11-16",
+      "title": "Decentralized Biosynthesis of the Spiro-DKP Alkaloid Chevalinulin A Enabled by Nonclustered P450 and Intermolecular [4 + 2] Cyclase.",
+      "first_author": "Ling-Hong Meng",
+      "doi": "10.1021/jacs.6c17478"
+    },
+    "doi:10.1021/acs.jafc.6c11012": {
+      "issue_date": "2026-11-16",
+      "title": "From Microbial Reservoirs to AI-Guided Enzyme Discovery: Advances, Challenges, and Prospects in Aflatoxin Enzymatic Degradation.",
+      "first_author": "Xuancheng Shen",
+      "doi": "10.1021/acs.jafc.6c11012"
+    },
+    "doi:10.1016/j.micres.2026.128819": {
+      "issue_date": "2026-11-16",
+      "title": "An engineered probiotic yeast converts extracellular ATP into adenosine to alleviate experimental colitis.",
+      "first_author": "Huiye Liu",
+      "doi": "10.1016/j.micres.2026.128819"
+    },
+    "doi:10.1186/s40643-026-01159-5": {
+      "issue_date": "2026-11-16",
+      "title": "Sequential regulation of dual catalytic modules for the directed biosynthesis of 2,5-furandicarboxylic acid in Escherichia coli.",
+      "first_author": "Yang F",
+      "doi": "10.1186/s40643-026-01159-5"
+    },
+    "doi:10.1016/j.biotechadv.2026.109084": {
+      "issue_date": "2026-11-16",
+      "title": "Systems biology and synthetic engineering of probiotic yeasts.",
+      "first_author": "Saqib Ali",
+      "doi": "10.1016/j.biotechadv.2026.109084"
+    },
+    "doi:10.1186/s12934-026-03097-5": {
+      "issue_date": "2026-11-16",
+      "title": "Refining genetic circuit design for enhanced type II polyketide biosynthesis in Escherichia coli.",
+      "first_author": "Zeynab Aghabayli",
+      "doi": "10.1186/s12934-026-03097-5"
+    },
+    "doi:10.1002/anie.6873420": {
+      "issue_date": "2026-11-16",
+      "title": "Synthetic Microbial Ecosystems for Stable Flow Biocatalysis",
+      "first_author": "Chun‐Yan Fang",
+      "doi": "10.1002/anie.6873420"
     }
   }
 }
